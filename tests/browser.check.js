@@ -15,6 +15,15 @@ try {
   await page.goto(target);
   await page.waitForFunction(() => window.hilfer);
   const report = page.locator('[data-report-section="CASE-001"]');
+  await page.locator('[data-open="ai"]').first().click();
+  assert.ok(await page.locator('#ai-window').isVisible());
+  assert.match(await page.locator('.ai-transcript').innerText(), /fixed, prewritten messages/);
+  await page.locator('[data-ai-next]').click();
+  assert.match(await page.locator('.ai-transcript').innerText(), /Consolidated Report/);
+  await page.locator('[data-ai-next]').click();
+  assert.match(await page.locator('.ai-transcript').innerText(), /source document/);
+  assert.equal(await page.locator('[data-ai-next]').isDisabled(), true);
+
   await page.locator('[data-open="reconciliation"]').first().click();
   assert.equal(await page.locator('#report-tab').getAttribute('aria-selected'), 'true');
   for (const text of ['Available for duty', 'Human Resources', 'Unverified']) assert.ok((await report.textContent()).includes(text));
@@ -71,6 +80,7 @@ try {
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 1);
   assert.ok(await page.evaluate(() => hilfer.getState().unlockedCaseIds.includes('CASE-002')));
   assert.equal(await page.locator('html').getAttribute('data-distortion'), '1');
+  assert.notEqual(await page.locator('.ai-avatar').evaluate(el => getComputedStyle(el).filter), 'none');
   assert.ok(await page.locator('html').evaluate(el => el.classList.contains('microglitch')));
   await page.waitForFunction(() => !document.documentElement.classList.contains('microglitch'));
   await page.evaluate(() => hilfer.reconcileClaim('CASE-001', 'OH-008', 'workEligibility'));

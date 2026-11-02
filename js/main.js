@@ -1,6 +1,7 @@
 import { createStore } from './core/store.js';
 import { mountRecords } from './apps/records-fixture.js';
 import { mountReconciliation } from './apps/reconciliation.js';
+import { mountAI } from './apps/ai.js';
 import { mountDistortion } from './effects/distortion.js';
 
 async function boot() {
@@ -31,6 +32,7 @@ async function boot() {
     return recordsApp.openRecord(recordId);
   }
   reconciliation = mountReconciliation(document.querySelector('#reconciliation-app'), store, { openRecord });
+  mountAI(document.querySelector('#ai-app'));
   mountDistortion(store);
   function update() {
     const state = store.getState();

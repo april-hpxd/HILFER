@@ -54,6 +54,7 @@
 .window-title { display: flex; align-items: center; gap: 5px; }
 .window-title::before { content: ''; width: 16px; height: 16px; flex: none; background: center / contain no-repeat var(--art-settings); }
 #records-window .window-title::before { background-image: var(--art-records); }
+#ai-window .window-title::before { background-image: var(--art-ai); }
 #reconciliation-window .window-title::before { background-image: var(--art-reconciliation); }
 .window-button { background: var(--button-bg); border-color: #eed1cc; color: #4a3031; }
 .close-btn:hover { background: #87353b !important; }
@@ -86,6 +87,7 @@
 .start-menu-item:hover { background: #853d46; color: #fff; }
 .start-menu-item[data-open]::before, .taskbar-item::before { content: ''; display: inline-block; width: 16px; height: 16px; flex: none; margin-right: 5px; background: center / contain no-repeat var(--art-settings); vertical-align: middle; }
 [data-open="records"]::before, .taskbar-item[data-window="records"]::before { background-image: var(--art-records); }
+[data-open="ai"]::before, .taskbar-item[data-window="ai"]::before { background-image: var(--art-ai); }
 [data-open="reconciliation"]::before, .taskbar-item[data-window="reconciliation"]::before { background-image: var(--art-reconciliation); }
 .taskbar-item { background: #ca9b97; border-color: #e6beb8; color: #402a2c; }
 .taskbar-item.active { background: #e7c4be; }
@@ -97,6 +99,13 @@
 :root[data-distortion="1"] .desktop-logo { filter: sepia(.15) contrast(1.08); opacity: .8; }
 :root[data-distortion="1"] #desktop::after { background: repeating-linear-gradient(0deg, transparent 0 4px, #56242a0a 4px 5px); }
 @media (max-width: 700px) { .desktop-brand { display: grid; } }
+
+/* Keep the workstation shell in Tahoma while leaving app document typography intact. */
+.desktop-icons, .desktop-icons *, .desktop-brand, .session-status,
+.window-header, .window-header *, .taskbar, .taskbar *,
+.start-menu, .start-menu * {
+  font-family: Tahoma, sans-serif;
+}
 
 /* Impeccable polish: preserve the existing desktop, improve reading and control states. */
 .pane-label, .preview-reference { font-size: 11px; }

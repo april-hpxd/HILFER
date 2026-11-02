@@ -54,3 +54,9 @@ The user approved experimenting with a simpler primary gameplay loop: **inspect 
 - Distortion remains milestone-triggered and idempotent.
 - Earlier drag/attach API is retained at the domain layer for compatibility, **not** as a primary gameplay requirement.
 - This is an experimental interaction validated on Jessica only. More complex cases, alternative procedural choices, and deliberate player complicity remain open design questions.
+
+## 2026-11-02 — Scripted AI app placeholder (user-requested prototype iteration)
+
+- Added an AI Assistant desktop app with fixed, navigation-oriented sample lines, a temporary generic portrait and optional user-triggered browser speech. It is explicitly not a live AI service and does not establish additional plot canon.
+- Portrait distortion follows the existing milestone-derived `distortionLevel`; it is not tied to clicks, elapsed time, or information discovery alone.
+- The assistant's eventual characterization, plot role, authored dialogue, portrait art, voice, and any endgame behavior remain unresolved/unapproved.

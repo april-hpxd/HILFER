@@ -44,6 +44,12 @@ The Records adapter is `mountRecords(root, store, {onClaim})` from `js/apps/reco
 
 Reconciliation is `mountReconciliation(root, store, {openRecord})` from `js/apps/reconciliation.js`, returning `focusComparison()`, `presentClaim(recordId,field)`, `getActiveCaseId()` and `showReport()`. `js/main.js` bridges Records' `onClaim` to Reconciliation's `presentClaim`, then focuses the Reconciliation window. The link back to Records is `openRecord(id)`, which clears search filters and opens the requested source. `window.hilfer` exposes the store and Reconciliation APIs for development and tests.
 
+### AI Assistant placeholder
+
+The desktop and Start menu open the scripted `AI Assistant` in `js/apps/ai.js`. It is not a live AI service: its fixed demonstration lines provide basic navigation guidance without adding story revelations. The generic portrait in `assets/placeholders/personnel.svg` is temporary. Its CSS distortion reads the existing root `data-distortion` level, which is advanced by reconciliation milestones; it does not use random effects or add a new progress store.
+
+The optional **Read aloud** control uses the browser's built-in Web Speech API (`speechSynthesis`) only after a user click. It is disabled with an explanation when unsupported, and speech is stopped when another line is selected, the app closes, or the page unloads. The browser's voice and pronunciation vary by OS; use authored, prerecorded audio later if voice performance and consistency become part of the story. No audio service or package is needed for this prototype.
+
 ### Claim workflow contract
 
 `Records → onClaim(recordId, field) → Reconciliation.presentClaim(...)`
