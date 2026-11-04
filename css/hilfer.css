@@ -28,7 +28,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-v
 .desktop-brand strong { font: bold 40px Georgia, serif; letter-spacing: 5px; }
 .desktop-brand span { letter-spacing: 3px; font-size: 10px; margin-top: 9px; }
 .desktop-brand small { font: 10px/1.7 monospace; margin-top: 35px; letter-spacing: 1px; }
-.window { max-width: calc(100vw - 12px); max-height: calc(100dvh - 42px); }
+.window { max-width: calc(100vw - 12px); max-height: calc(100dvh - 68px); }
 .window-header { height: 24px; }
 .window-title { font-size: 12px; }
 .window-button { width: 20px; height: 18px; font-size: 12px; padding: 0; }
@@ -133,20 +133,46 @@ select { font: 11px Tahoma, sans-serif; min-width: 0; width: 100%; padding: 2px;
 .start-menu-item { width: 100%; border: 0; text-align: left; }
 .terminal-label { font: 9px monospace; margin: 0 12px; white-space: nowrap; }
 :root[data-distortion="1"] { --desktop-bg: #2b4b42; --brand-ink: #bac2a1; }
-:root[data-distortion="1"] #desktop { background-image: var(--wallpaper-distorted); }
+:root[data-distortion="1"] #desktop { background-image: linear-gradient(#fdebe8, #fdebe8), var(--wallpaper-distorted); }
 :root[data-distortion="1"] #desktop::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg,transparent 0px,transparent 4px,#bcc69b08 5px); z-index: 99999; }
 :root[data-distortion="1"] .desktop-brand { text-shadow: 2px 0 #abb38355; transform: translateX(2px); }
-.microglitch #desktop { animation: microglitch .6s steps(1) 1; }
-@keyframes microglitch { 15% { filter: sepia(.3); transform: translateX(2px); } 30% { transform: translateX(-2px); } 55% { filter: contrast(1.12); transform: translateY(1px); } 75% { transform: none; } }
-@media (prefers-reduced-motion: reduce) { .microglitch #desktop { animation: none; } }
+html.microglitch #desktop { animation: microglitch-screen 1.4s steps(1) 1; }
+html.microglitch #desktop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 99999;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent 0 13px, #7d1d2b66 14px 18px, transparent 19px 31px);
+  animation: microglitch-bands 1.4s steps(1) 1;
+}
+@keyframes microglitch-screen {
+  0%, 100% { filter: none; transform: none; }
+  8%, 18% { filter: contrast(1.28) saturate(.55) sepia(.18); transform: translateX(6px); }
+  22% { filter: contrast(1.4) hue-rotate(12deg); transform: translateX(-7px); }
+  34% { filter: contrast(1.18) saturate(.7); transform: translate(4px, 2px); }
+  48% { filter: none; transform: none; }
+  58% { filter: contrast(1.24) sepia(.14); transform: translateX(-4px); }
+  68%, 100% { filter: none; transform: none; }
+}
+@keyframes microglitch-bands {
+  0%, 100% { opacity: 0; transform: none; }
+  8%, 20% { opacity: 1; transform: translateY(-18px); }
+  22%, 38% { opacity: .8; transform: translateY(22px); }
+  58%, 66% { opacity: .55; transform: translateY(-8px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.microglitch #desktop { animation: none; filter: contrast(1.18) sepia(.14); }
+  html.microglitch #desktop::before { animation: none; opacity: .45; }
+}
 @media (max-width: 700px) {
-  .window { width: calc(100vw - 12px) !important; height: calc(100dvh - 48px) !important; }
+  .window { width: calc(100vw - 12px) !important; height: calc(100dvh - 74px) !important; }
   .reconciliation-layout { grid-template-columns: 95px minmax(0,1fr); }
   .case-detail { padding: 8px; } .terminal-label { display: none; }
   .desktop-brand { display: none; } .attach-form { flex-wrap: wrap; }
 }
 
-.window.maximized { max-width: 100vw; max-height: calc(100dvh - 32px); height: calc(100dvh - 32px) !important; }
+.window.maximized { max-width: 100vw; max-height: calc(100dvh - 60px); height: calc(100dvh - 60px) !important; }
 
 @media (max-width: 450px) { #resolution-form fieldset { grid-template-columns: 1fr; gap: 3px; } #resolution-form label:not(:first-child) { margin-top: 4px; } .case-metadata { flex-wrap: wrap; } .app-toolbar { font-size: 9px; } }
 /* Register and report share the same window and the same saved determinations. */
@@ -235,7 +261,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 1px d
 .folder-tree button { display: flex; align-items: start; gap: 7px; padding: 8px 3px; line-height: 1.4; }
 .folder-symbol { flex: none; position: relative; width: 13px; height: 10px; background: var(--folder-manila); border: 1px solid #766b45; margin-top: 3px; }
 .folder-symbol::before { content: ''; position: absolute; top: -4px; left: -1px; width: 6px; height: 3px; background: var(--folder-manila); border: 1px solid #766b45; border-bottom: 0; }
-.file-symbol { display: inline-block; flex: none; width: 10px; height: 13px; border: 1px solid var(--ledger-secondary); background: var(--routing-paper); vertical-align: middle; margin-right: 4px; }
+.file-symbol { display: inline-block; flex: none; width: 16px; height: 16px; background: center / contain no-repeat var(--art-file); vertical-align: middle; margin-right: 4px; }
 .record-file b { display: flex; align-items: center; gap: 5px; font: 12px 'Courier New', monospace; }
 .record-file span:not(.file-symbol) { padding-left: 19px; }
 .record-file small { padding-left: 19px; font-size: 10px; }

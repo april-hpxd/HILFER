@@ -83,11 +83,11 @@ Milestone events are delivered by `store.onEvent` after state changes:
 | `hilfer:distortion-changed` | `{previousLevel,level}` |
 | `hilfer:progress-reset` | `{}` |
 
-The distortion module listens for reconciliation milestones, not clicks or elapsed browser time. Replaying the same filed case must not duplicate milestones.
+The distortion module listens for reconciliation milestones, not clicks or elapsed browser time. Replaying the same filed case must not duplicate milestones. The first reconciliation milestone shows a brief 1.4-second visual glitch and plays the first 1.5 seconds of `assets/sounds/glitch.mp3`; reset stops the cue. The longer static-humming track remains unused so ordinary investigation stays quiet and does not depend on autoplay.
 
 ## Asset boundaries
 
-Original art is in `assets/arwa/`, with provenance and usage guidance in `assets/arwa/CREDITS.md`. `css/assets.css` centralizes shell asset paths; `css/arwa.css` styles the shell, and `css/hilfer.css` supplies game document layouts, claim comparisons and effects. Original upstream desktop snapshot in `references/WIN98-template/` remains unchanged.
+Original art is in `assets/arwa/`, with provenance and usage guidance in `assets/arwa/CREDITS.md`. `css/assets.css` centralizes shell asset paths; Standard uses `assets/arwa/saturated/`, and Archive / Graphite switches desktop icons and the HILFER mark to the matching files in `assets/arwa/not saturated/`. `css/arwa.css` styles the shell, and `css/hilfer.css` supplies game document layouts, claim comparisons and effects. Original upstream desktop snapshot in `references/WIN98-template/` remains unchanged.
 
 The initial medical/HR document graphics are placeholders pending Arwa's application-specific work. Prioritize legibility and believable paper/report composition, not more instructions or giant panels.
 

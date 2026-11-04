@@ -14,8 +14,63 @@ const target = process.env.HILFER_URL || 'http://127.0.0.1:8080';
 try {
   await page.goto(target);
   await page.waitForFunction(() => window.hilfer);
+  const movableIcon = page.locator('.desktop-icons .icon').first();
+  const initialIconBounds = await movableIcon.boundingBox();
+  await page.mouse.move(initialIconBounds.x + 30, initialIconBounds.y + 25);
+  await page.mouse.down();
+  await page.mouse.move(initialIconBounds.x + 90, initialIconBounds.y + 65, {steps:8});
+  await page.mouse.up();
+  const movedIconBounds = await movableIcon.boundingBox();
+  assert.ok(movedIconBounds.x > initialIconBounds.x + 40);
+  assert.ok(movedIconBounds.y > initialIconBounds.y + 20);
+  assert.ok(await page.locator('#reconciliation-window').isHidden(), 'dragging an icon does not open its app');
+  await page.setViewportSize({width:980,height:700});
+  const resizedIconBounds = await movableIcon.boundingBox();
+  const desktopBounds = await page.locator('#desktop').boundingBox();
+  assert.ok(resizedIconBounds.width < movedIconBounds.width, 'desktop icons scale down with the workspace');
+  assert.ok(resizedIconBounds.x >= desktopBounds.x && resizedIconBounds.x + resizedIconBounds.width <= desktopBounds.x + desktopBounds.width);
+  assert.ok(resizedIconBounds.y >= desktopBounds.y && resizedIconBounds.y + resizedIconBounds.height <= desktopBounds.y + desktopBounds.height - 58);
+  await page.setViewportSize({width:1440,height:1000});
+  assert.equal(await movableIcon.evaluate(el => getComputedStyle(el).fontFamily), 'Tahoma, sans-serif');
+  assert.equal(await page.locator('.report-letterhead b').evaluate(el => getComputedStyle(el).fontFamily), 'Tahoma, sans-serif');
+  assert.equal(await page.locator('.desktop-icons .icon').count(), 19);
+  assert.equal(await page.locator('.desktop-icons .icon[data-open]').count(), 19, 'every desktop icon opens an application');
+  assert.ok(await page.locator('.desktop-icons .icon-text').evaluateAll(els => els.every(el => el.textContent === el.textContent.toUpperCase())));
+  await page.locator('.desktop-icons [data-open="my-computer"]').click();
+  assert.ok(await page.locator('#my-computer-window').isVisible());
+  assert.equal(await page.locator('#my-computer-window .window-content').innerText(), 'My Computer');
+  await page.getByRole('button', {name:'Close My Computer'}).click();
+  await page.locator('#display-theme').evaluate(select => {
+    select.value = 'archive';
+    select.dispatchEvent(new Event('change', {bubbles:true}));
+  });
+  const archiveArt = await page.locator('.desktop-icons .icon-image').evaluateAll(els => els.map(el => getComputedStyle(el).backgroundImage));
+  assert.ok(archiveArt.every(image => /not(?:%20| )saturated/.test(image)), 'graphite uses all muted desktop icons');
+  assert.match(await page.locator('.desktop-logo').evaluate(el => getComputedStyle(el).backgroundImage), /not(?:%20| )saturated.*logo_pixelated\.png/);
+  assert.ok(await page.locator('.desktop-icons .icon-image').evaluateAll(els => els.every(el => getComputedStyle(el).mixBlendMode === 'multiply')), 'graphite blends white icon backdrops into the desktop');
+  for (const id of ['ai', 'themes']) {
+    const bounds = await page.locator(`.desktop-icons [data-open="${id}"]`).boundingBox();
+    assert.ok(bounds.x > 1440 * 0.7, `${id} sits in the open right-hand desktop area`);
+    assert.ok(bounds.y + bounds.height < 1000 - 58, `${id} stays above the taskbar`);
+  }
+  assert.match(await page.locator('.file-symbol').first().evaluate(el => getComputedStyle(el).backgroundImage), /not(?:%20| )saturated/, 'graphite also changes the record-list file icon');
+  assert.equal(await page.locator('.file-symbol').first().evaluate(el => getComputedStyle(el).mixBlendMode), 'multiply');
+  await page.locator('#display-theme').evaluate(select => {
+    select.value = 'default';
+    select.dispatchEvent(new Event('change', {bubbles:true}));
+  });
+  const standardArt = await page.locator('.desktop-icons .icon-image').evaluateAll(els => els.map(el => getComputedStyle(el).backgroundImage));
+  assert.ok(standardArt.every(image => /saturated/.test(image) && !/not(?:%20| )saturated/.test(image)), 'standard uses saturated desktop icons');
+  assert.ok(await page.locator('.desktop-icons .icon-image').evaluateAll(els => els.every(el => getComputedStyle(el).mixBlendMode === 'normal')), 'standard icon artwork is unchanged');
+  assert.match(await page.locator('.file-symbol').first().evaluate(el => getComputedStyle(el).backgroundImage), /saturated/);
+  for (const asset of ['reconciliation', 'records', 'terminal', 'settings', 'file']) {
+    assert.equal((await page.request.get(new URL('/assets/arwa/saturated/' + asset + '.png', target).href)).status(), 200);
+  }
+  assert.equal((await page.request.get(new URL('/assets/arwa/saturated/downloads.png', target).href)).status(), 200);
+  assert.equal((await page.request.get(new URL('/assets/arwa/not%20saturated/downloads.png', target).href)).status(), 200);
   const report = page.locator('[data-report-section="CASE-001"]');
-  await page.locator('[data-open="ai"]').first().click();
+  await page.locator('.start-button').click();
+  await page.locator('.start-menu-item[data-open="ai"]').click();
   assert.ok(await page.locator('#ai-window').isVisible());
   assert.match(await page.locator('.ai-transcript').innerText(), /fixed, prewritten messages/);
   await page.locator('[data-ai-next]').click();

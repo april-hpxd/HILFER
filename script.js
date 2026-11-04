@@ -10,11 +10,82 @@ let zIndexCounter = 1000;
 let draggedElement = null;
 let offset = { x: 0, y: 0 };
 let selectedIcon = null;
+let draggedDesktopIcon = null;
+let suppressIconOpen = false;
 
+const applicationTitles = {
+    reconciliation: 'Reconciliation',
+    records: 'Records',
+    themes: 'Display Properties',
+    ai: 'AI Assistant',
+    'my-computer': 'My Computer',
+    emails: 'Emails',
+    research: 'Research',
+    'data-analytics': 'Data Analytics',
+    reports: 'Reports',
+    'med-info': 'Medical Information',
+    'facility-logs': 'Facility Logs',
+    footage: 'Security Footage',
+    notes: 'Notes',
+    maintenance: 'Maintenance',
+    'recycle-bin': 'Recycle Bin',
+    hr: 'Human Resources',
+    notices: 'Notices',
+    'safety-alerts': 'Safety Alerts',
+    downloads: 'Downloads'
+};
 
+function createPlaceholderWindow(windowId) {
+    const title = applicationTitles[windowId];
+    if (!title) return null;
+
+    const windowEl = document.createElement('section');
+    windowEl.className = 'window placeholder-window';
+    windowEl.id = windowId + '-window';
+    windowEl.setAttribute('aria-label', title);
+    const offset = (document.querySelectorAll('.window').length % 8) * 24;
+    Object.assign(windowEl.style, {
+        top: (70 + offset) + 'px',
+        left: (100 + offset) + 'px',
+        width: '420px',
+        height: '300px'
+    });
+
+    const header = document.createElement('div');
+    header.className = 'window-header';
+    const heading = document.createElement('span');
+    heading.className = 'window-title';
+    heading.textContent = title;
+    const controls = document.createElement('div');
+    controls.className = 'window-controls';
+    for (const [action, label, glyph] of [
+        ['minimize', 'Minimize', '_'],
+        ['maximize', 'Maximize', '□'],
+        ['close', 'Close', '×']
+    ]) {
+        const button = document.createElement('button');
+        button.className = 'window-button' + (action === 'close' ? ' close-btn' : '');
+        button.type = 'button';
+        button.dataset.control = action;
+        button.setAttribute('aria-label', `${label} ${title}`);
+        button.textContent = glyph;
+        controls.append(button);
+    }
+    header.append(heading, controls);
+
+    const content = document.createElement('div');
+    content.className = 'window-content placeholder-window-content';
+    const appName = document.createElement('span');
+    appName.textContent = title;
+    content.append(appName);
+    windowEl.append(header, content);
+    document.getElementById('desktop').append(windowEl);
+    fitWindowsToWorkspace();
+    return windowEl;
+}
 
 function openWindow(windowId) {
-    const windowEl = document.getElementById(windowId + '-window');
+    const windowEl = document.getElementById(windowId + '-window') || createPlaceholderWindow(windowId);
     if (!windowEl) return;
 
     windowEl.classList.add('visible');
@@ -74,7 +145,7 @@ function maximizeWindow(windowId) {
 
         windowEl.classList.add('maximized');
         windowEl.style.width = '100vw';
-        windowEl.style.height = 'calc(100dvh - 32px)';
+        windowEl.style.height = 'calc(100dvh - 60px)';
         windowEl.style.top = '0';
         windowEl.style.left = '0';
     }
@@ -138,8 +209,7 @@ function toggleWindow(windowId) {
 }
 
 function getWindowTitle(windowId) {
-    const titles = { reconciliation: 'Reconciliation', records: 'Records', themes: 'Display Properties' };
-    return titles[windowId] || windowId;
+    return applicationTitles[windowId] || windowId;
 }
 
 function clearIconSelection() {
@@ -209,10 +279,74 @@ function fitWindowsToWorkspace() {
     for (const el of document.querySelectorAll('.window:not(.maximized)')) {
         const style = getComputedStyle(el);
         const width = Math.min(parseFloat(style.width), window.innerWidth - 12);
-        const height = Math.min(parseFloat(style.height), window.innerHeight - 42);
+        const height = Math.min(parseFloat(style.height), window.innerHeight - 68);
         el.style.left = (window.innerWidth <= 700 ? 6 : Math.max(6, Math.min(parseFloat(el.style.left) || 0, window.innerWidth - width - 12))) + 'px';
-        el.style.top = (window.innerWidth <= 700 ? 10 : Math.max(6, Math.min(parseFloat(el.style.top) || 0, window.innerHeight - height - 42))) + 'px';
+        el.style.top = (window.innerWidth <= 700 ? 10 : Math.max(6, Math.min(parseFloat(el.style.top) || 0, window.innerHeight - height - 68))) + 'px';
     }
+}
+
+function setDesktopIconPosition(icon, left, top) {
+    const desktop = document.getElementById('desktop');
+    const maxLeft = Math.max(0, desktop.clientWidth - icon.offsetWidth - 8);
+    const maxTop = Math.max(0, desktop.clientHeight - icon.offsetHeight - 68);
+    const x = Math.max(0, Math.min(left, maxLeft));
+    const y = Math.max(0, Math.min(top, maxTop));
+    icon.style.left = (x / desktop.clientWidth * 100) + '%';
+    icon.style.top = (y / desktop.clientHeight * 100) + '%';
+}
+
+function fitDesktopIconsToWorkspace() {
+    const desktop = document.getElementById('desktop');
+    const bounds = desktop.getBoundingClientRect();
+    for (const icon of desktop.querySelectorAll('.desktop-icons .icon')) {
+        if (icon.dataset.userPositioned !== 'true') continue;
+        const iconBounds = icon.getBoundingClientRect();
+        setDesktopIconPosition(icon, iconBounds.left - bounds.left, iconBounds.top - bounds.top);
+    }
+}
+
+function initDesktopIconDrag() {
+    document.addEventListener('pointerdown', e => {
+        const icon = e.target.closest('.desktop-icons .icon');
+        if (!icon || e.button !== 0) return;
+        const desktop = document.getElementById('desktop');
+        const bounds = desktop.getBoundingClientRect();
+        const iconBounds = icon.getBoundingClientRect();
+        draggedDesktopIcon = {
+            icon,
+            pointerId: e.pointerId,
+            startX: e.clientX,
+            startY: e.clientY,
+            left: iconBounds.left - bounds.left,
+            top: iconBounds.top - bounds.top,
+            moved: false
+        };
+    });
+
+    document.addEventListener('pointermove', e => {
+        if (!draggedDesktopIcon || draggedDesktopIcon.pointerId !== e.pointerId) return;
+        const dx = e.clientX - draggedDesktopIcon.startX;
+        const dy = e.clientY - draggedDesktopIcon.startY;
+        if (!draggedDesktopIcon.moved && Math.hypot(dx, dy) < 5) return;
+        draggedDesktopIcon.moved = true;
+        draggedDesktopIcon.icon.dataset.userPositioned = 'true';
+        setDesktopIconPosition(draggedDesktopIcon.icon, draggedDesktopIcon.left + dx, draggedDesktopIcon.top + dy);
+        e.preventDefault();
+    });
+
+    document.addEventListener('pointerup', e => {
+        if (!draggedDesktopIcon || draggedDesktopIcon.pointerId !== e.pointerId) return;
+        suppressIconOpen = draggedDesktopIcon.moved;
+        draggedDesktopIcon = null;
+    });
+    document.addEventListener('pointercancel', () => {
+        draggedDesktopIcon = null;
+        suppressIconOpen = false;
+    });
+    window.addEventListener('blur', () => {
+        draggedDesktopIcon = null;
+        suppressIconOpen = false;
+    });
 }
 
 function updateClock() {
@@ -229,6 +363,12 @@ function updateClock() {
 
 // HILFER: only title bars move windows; native record drag events remain untouched.
 document.addEventListener('click', e => {
+    if (suppressIconOpen && e.target.closest('.desktop-icons .icon')) {
+        e.preventDefault();
+        suppressIconOpen = false;
+        return;
+    }
+    suppressIconOpen = false;
     const app = e.target.closest('[data-open]');
     if (app) { openWindow(app.dataset.open); return; }
     const control = e.target.closest('[data-control]');
@@ -247,8 +387,13 @@ document.querySelector('#display-theme').addEventListener('change', e => {
     document.documentElement.dataset.theme = e.target.value;
 });
 initDragAndDrop();
+initDesktopIconDrag();
 fitWindowsToWorkspace();
-window.addEventListener('resize', fitWindowsToWorkspace);
+fitDesktopIconsToWorkspace();
+window.addEventListener('resize', () => {
+    fitWindowsToWorkspace();
+    fitDesktopIconsToWorkspace();
+});
 updateClock();
 setInterval(updateClock, 1000);
 
@@ -262,7 +407,7 @@ function arrangeWorkspace() {
     }
     const available = window.innerWidth - 136;
     const registerWidth = Math.round(available * 0.43);
-    const height = Math.min(620, window.innerHeight - 82);
+    const height = Math.min(620, window.innerHeight - 104);
     for (const [id, left, width] of [
         ['reconciliation', 112, registerWidth],
         ['records', 124 + registerWidth, available - registerWidth]

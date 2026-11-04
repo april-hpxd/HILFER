@@ -11,11 +11,13 @@ Imported selectively from [april-hpxd/WIN98-template](https://github.com/april-h
 | `reconciliation.webp` | `assets/icons/clean version/tasks.png` | 128 x 128, lossless WebP |
 | `records.webp` | `assets/icons/clean version/folder.png` | 128 x 128, lossless WebP |
 | `settings.webp` | `assets/icons/clean version/settings.png` | 128 x 128, lossless WebP |
+| Shell icon pairs | Matching PNGs in `assets/arwa/saturated/` and `assets/arwa/not saturated/`, including `logo_pixelated.png` | Standard and Archive / Graphite theme variants referenced directly |
+| Short glitch cue | `assets/sounds/glitch.mp3` | First 1.5 seconds used after the first case is filed |
 
-Derivatives were resized with Lanczos and encoded using Pillow/WebP; originals were not modified. The five runtime files total **46,890 bytes**, compared with **1,872,905 bytes** for their source PNGs. Original full-resolution files remain in the source repository; no unused full-resolution collection is shipped here.
+The five WebP derivatives were resized with Lanczos and encoded using Pillow/WebP; originals were not modified. Those files total **46,890 bytes**, compared with **1,872,905 bytes** for their source PNGs. The saturated shell icons are referenced directly from their supplied PNG files.
 
 Asset paths and clean/distorted aliases live in `css/assets.css`. Matching distorted artwork is not supplied for these five resources, so distorted paths currently fall back to the same artwork; the existing milestone-driven CSS contamination remains active. Camera distortion images were deliberately excluded because the prototype has no Security application.
 
-`css/arwa.css` selectively adapts the source's burgundy title bars, rose window frames, desktop composition, shell icons, taskbar and Start menu. The wallpaper's embedded OS label is part of the artwork, not a game version declaration. Its decorative composition scales to the desktop to keep that label visible at different aspect ratios.
+`css/arwa.css` selectively adapts the source's burgundy title bars, rose window frames, desktop composition, shell icons, taskbar and Start menu. The wallpaper's embedded OS label is part of the artwork, not a game version declaration. To match the supplied desktop reference, the shell covers its original upper-left placement and renders the same label at the upper right. No dedicated Safety Alerts or Downloads icons are supplied yet; Safety Alerts uses the document icon with a CSS alert badge, and Downloads currently reuses the employee-records folder icon.
 
 No source mockup JavaScript, application data, employee identities, case definitions, mail, assistant or security screens were imported. The personnel portrait remains the original neutral placeholder.

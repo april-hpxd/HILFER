@@ -1,11 +1,28 @@
 /* Central visual paths. Replace a distorted URL when Arwa supplies a matching variant. */
 :root {
   --art-wallpaper-clean: url('../assets/arwa/wallpaper.webp');
-  --art-logo-clean: url('../assets/arwa/logo.webp');
-  --art-reconciliation-clean: url('../assets/arwa/reconciliation.webp');
-  --art-records-clean: url('../assets/arwa/records.webp');
-  --art-ai-clean: url('../assets/placeholders/ai.svg');
-  --art-settings-clean: url('../assets/arwa/settings.webp');
+  --art-logo-clean: url('../assets/arwa/saturated/logo_pixelated.png');
+  --art-reconciliation-clean: url('../assets/arwa/saturated/reconciliation.png');
+  --art-records-clean: url('../assets/arwa/saturated/records.png');
+  --art-ai-clean: url('../assets/arwa/saturated/terminal.png');
+  --art-settings-clean: url('../assets/arwa/saturated/settings.png');
+  --art-my-computer: url('../assets/arwa/saturated/my_computer.png');
+  --art-employee-records: url('../assets/arwa/saturated/employee_records.png');
+  --art-emails: url('../assets/arwa/saturated/emails.png');
+  --art-research: url('../assets/arwa/saturated/research.png');
+  --art-data-analytics: url('../assets/arwa/saturated/data_analytics.png');
+  --art-reports: url('../assets/arwa/saturated/reports.png');
+  --art-med-info: url('../assets/arwa/saturated/med_info.png');
+  --art-facility-logs: url('../assets/arwa/saturated/facility_logs.png');
+  --art-footage: url('../assets/arwa/saturated/footage.png');
+  --art-notes: url('../assets/arwa/saturated/notes.png');
+  --art-maintenance: url('../assets/arwa/saturated/maintanence.png');
+  --art-recycle-bin: url('../assets/arwa/saturated/recycle_bin.png');
+  --art-hr: url('../assets/arwa/saturated/hr.png');
+  --art-file: url('../assets/arwa/saturated/file.png');
+  --art-notices: var(--art-file);
+  --art-safety-alerts: var(--art-file);
+  --art-downloads: url('../assets/arwa/saturated/downloads.png');
   --art-wallpaper-distorted: var(--art-wallpaper-clean);
   --art-logo-distorted: var(--art-logo-clean);
   --art-reconciliation-distorted: var(--art-reconciliation-clean);
@@ -18,6 +35,28 @@
   --art-records: var(--art-records-clean);
   --art-ai: var(--art-ai-clean);
   --art-settings: var(--art-settings-clean);
+}
+:root[data-theme="archive"] {
+  --art-logo-clean: url('../assets/arwa/not%20saturated/logo_pixelated.png');
+  --art-reconciliation-clean: url('../assets/arwa/not%20saturated/reconciliation.png');
+  --art-records-clean: url('../assets/arwa/not%20saturated/records.png');
+  --art-ai-clean: url('../assets/arwa/not%20saturated/terminal.png');
+  --art-settings-clean: url('../assets/arwa/not%20saturated/settings.png');
+  --art-my-computer: url('../assets/arwa/not%20saturated/my_computer.png');
+  --art-employee-records: url('../assets/arwa/not%20saturated/employee_records.png');
+  --art-emails: url('../assets/arwa/not%20saturated/emails.png');
+  --art-research: url('../assets/arwa/not%20saturated/research.png');
+  --art-data-analytics: url('../assets/arwa/not%20saturated/data_analytics.png');
+  --art-reports: url('../assets/arwa/not%20saturated/reports.png');
+  --art-med-info: url('../assets/arwa/not%20saturated/med_info.png');
+  --art-facility-logs: url('../assets/arwa/not%20saturated/facility_logs.png');
+  --art-footage: url('../assets/arwa/not%20saturated/footage.png');
+  --art-notes: url('../assets/arwa/not%20saturated/notes.png');
+  --art-maintenance: url('../assets/arwa/not%20saturated/maintanence.png');
+  --art-recycle-bin: url('../assets/arwa/not%20saturated/recycle_bin.png');
+  --art-hr: url('../assets/arwa/not%20saturated/hr.png');
+  --art-file: url('../assets/arwa/not%20saturated/file.png');
+  --art-downloads: url('../assets/arwa/not%20saturated/downloads.png');
 }
 :root[data-distortion="1"] {
   --art-wallpaper: var(--art-wallpaper-distorted);
@@ -32,3 +71,19 @@
 [data-art="records"] { background-image: var(--art-records); }
 [data-art="ai"] { background-image: var(--art-ai); }
 [data-art="settings"] { background-image: var(--art-settings); }
+[data-art="my_computer"] { background-image: var(--art-my-computer); }
+[data-art="employee_records"] { background-image: var(--art-employee-records); }
+[data-art="emails"] { background-image: var(--art-emails); }
+[data-art="research"] { background-image: var(--art-research); }
+[data-art="data_analytics"] { background-image: var(--art-data-analytics); }
+[data-art="reports"] { background-image: var(--art-reports); }
+[data-art="med_info"] { background-image: var(--art-med-info); }
+[data-art="facility_logs"] { background-image: var(--art-facility-logs); }
+[data-art="footage"] { background-image: var(--art-footage); }
+[data-art="notes"] { background-image: var(--art-notes); }
+[data-art="maintenance"] { background-image: var(--art-maintenance); }
+[data-art="recycle_bin"] { background-image: var(--art-recycle-bin); }
+[data-art="hr"] { background-image: var(--art-hr); }
+[data-art="notices"] { background-image: var(--art-notices); }
+[data-art="safety_alerts"] { background-image: var(--art-safety-alerts); }
+[data-art="downloads"] { background-image: var(--art-downloads); }
