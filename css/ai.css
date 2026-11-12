@@ -61,11 +61,6 @@
 .ai-actions button { min-height: 26px; padding: 3px 8px; }
 .ai-status { min-height: 14px; margin-top: 6px; color: var(--ledger-secondary); font-size: 10px; }
 
-:root[data-distortion="1"] .ai-avatar {
-  filter: contrast(1.12) sepia(.18);
-  transform: translateX(1px);
-}
-
 :root[data-distortion="2"] .ai-avatar {
   filter: contrast(1.3) saturate(.72) sepia(.25);
   transform: translateX(-2px) scaleX(.97);

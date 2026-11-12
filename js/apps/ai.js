@@ -4,11 +4,11 @@ const scriptedMessages = [
   'When a source document raises a question, return to Reconciliation to review it against the report.'
 ];
 
-export function mountAI(root) {
+export function mountAI(root, store) {
   root.classList.add('ai-app');
   root.innerHTML = `
     <header class="ai-profile">
-      <img class="ai-avatar" src="./assets/placeholders/personnel.svg" alt="Temporary generic profile portrait">
+      <img class="ai-avatar" src="./assets/arwa/ai_states/ai1.png" alt="HILFER Assistant profile">
       <div>
         <h1>HILFER Assistant</h1>
         <p>Internal support interface</p>
@@ -31,9 +31,23 @@ export function mountAI(root) {
   const speakButton = root.querySelector('[data-ai-speak]');
   const stopButton = root.querySelector('[data-ai-stop]');
   const status = root.querySelector('.ai-status');
+  const avatar = root.querySelector('.ai-avatar');
   const canSpeak = typeof window.speechSynthesis !== 'undefined'
     && typeof window.SpeechSynthesisUtterance !== 'undefined';
   let messageIndex = 0;
+
+  function updateAvatar(state) {
+    const distorted = state.distortionLevel > 0;
+    avatar.src = distorted
+      ? './assets/arwa/ai_states/ai2.png'
+      : './assets/arwa/ai_states/ai1.png';
+    avatar.alt = distorted
+      ? 'HILFER Assistant profile, slightly distorted'
+      : 'HILFER Assistant profile';
+  }
+
+  updateAvatar(store.getState());
+  store.subscribe(updateAvatar);
 
   function appendMessage() {
     const message = document.createElement('p');

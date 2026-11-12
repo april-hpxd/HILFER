@@ -72,6 +72,9 @@ try {
   await page.locator('.start-button').click();
   await page.locator('.start-menu-item[data-open="ai"]').click();
   assert.ok(await page.locator('#ai-window').isVisible());
+  assert.equal(await page.locator('.ai-avatar').getAttribute('src'), './assets/arwa/ai_states/ai1.png');
+  assert.equal((await page.request.get(new URL('/assets/arwa/ai_states/ai1.png', target).href)).status(), 200);
+  assert.equal((await page.request.get(new URL('/assets/arwa/ai_states/ai2.png', target).href)).status(), 200);
   assert.match(await page.locator('.ai-transcript').innerText(), /fixed, prewritten messages/);
   await page.locator('[data-ai-next]').click();
   assert.match(await page.locator('.ai-transcript').innerText(), /Consolidated Report/);
@@ -135,7 +138,9 @@ try {
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 1);
   assert.ok(await page.evaluate(() => hilfer.getState().unlockedCaseIds.includes('CASE-002')));
   assert.equal(await page.locator('html').getAttribute('data-distortion'), '1');
-  assert.notEqual(await page.locator('.ai-avatar').evaluate(el => getComputedStyle(el).filter), 'none');
+  assert.equal(await page.locator('.ai-avatar').getAttribute('src'), './assets/arwa/ai_states/ai2.png');
+  assert.equal(await page.locator('.ai-avatar').getAttribute('alt'), 'HILFER Assistant profile, slightly distorted');
+  assert.equal(await page.locator('.ai-avatar').evaluate(el => getComputedStyle(el).filter), 'none');
   assert.ok(await page.locator('html').evaluate(el => el.classList.contains('microglitch')));
   await page.waitForFunction(() => !document.documentElement.classList.contains('microglitch'));
   await page.evaluate(() => hilfer.reconcileClaim('CASE-001', 'OH-008', 'workEligibility'));
@@ -155,11 +160,13 @@ try {
   assert.ok(await page.locator('#records-window').evaluate(el => el.classList.contains('active')));
   await page.reload(); await page.waitForFunction(() => window.hilfer);
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 1);
+  assert.equal(await page.locator('.ai-avatar').getAttribute('src'), './assets/arwa/ai_states/ai2.png');
   assert.match(await page.locator('[data-report-section="CASE-001"]').textContent(), /NOT_CLEARED/);
   await page.locator('.start-button').click();
   await page.locator('#reset-progress').click();
   assert.equal(await page.evaluate(() => hilfer.getState().completedCaseIds.length), 0);
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 0);
+  assert.equal(await page.locator('.ai-avatar').getAttribute('src'), './assets/arwa/ai_states/ai1.png');
   await page.locator('[data-open="reconciliation"]').first().click();
   for (const text of ['Available for duty', 'Unverified']) assert.ok((await report.textContent()).includes(text));
 

@@ -32,7 +32,7 @@ async function boot() {
     return recordsApp.openRecord(recordId);
   }
   reconciliation = mountReconciliation(document.querySelector('#reconciliation-app'), store, { openRecord });
-  mountAI(document.querySelector('#ai-app'));
+  mountAI(document.querySelector('#ai-app'), store);
   mountDistortion(store);
   function update() {
     const state = store.getState();

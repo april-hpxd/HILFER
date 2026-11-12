@@ -20,4 +20,4 @@ Asset paths and clean/distorted aliases live in `css/assets.css`. Matching disto
 
 `css/arwa.css` selectively adapts the source's burgundy title bars, rose window frames, desktop composition, shell icons, taskbar and Start menu. The wallpaper's embedded OS label is part of the artwork, not a game version declaration. To match the supplied desktop reference, the shell covers its original upper-left placement and renders the same label at the upper right. No dedicated Safety Alerts or Downloads icons are supplied yet; Safety Alerts uses the document icon with a CSS alert badge, and Downloads currently reuses the employee-records folder icon.
 
-No source mockup JavaScript, application data, employee identities, case definitions, mail, assistant or security screens were imported. The personnel portrait remains the original neutral placeholder.
+No source mockup JavaScript, application data, employee identities, case definitions, mail or security screens were imported. The AI Assistant profile uses the supplied portrait pair in `ai_states/`, switching to the slightly distorted image after the first case glitch.
