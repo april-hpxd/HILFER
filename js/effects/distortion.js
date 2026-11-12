@@ -1,23 +1,23 @@
 export function mountDistortion(store) {
   let timer;
   let soundTimer;
-  const glitchSound = document.querySelector('#glitch-sound');
-
-  function stopGlitchSound() {
+  const audio = document.querySelector('#glitch-sound');
+  if (audio) audio.volume = 0.2;
+  function stopSound() {
     clearTimeout(soundTimer);
-    glitchSound.pause();
-    glitchSound.currentTime = 0;
+    if (audio) { audio.pause(); audio.currentTime = 0; }
   }
-
-  function playGlitchSound() {
-    stopGlitchSound();
-    const playback = glitchSound.play();
-    if (playback) {
-      playback.catch(error => console.warn('Could not play the glitch cue.', error));
+  function playSound() {
+    if (!audio) return;
+    stopSound();
+    try {
+      audio.play()?.catch(error => console.warn('Could not play the glitch cue.', error));
+    } catch (error) {
+      console.warn('Could not play the glitch cue.', error);
     }
-    soundTimer = setTimeout(stopGlitchSound, 1500);
+    soundTimer = setTimeout(stopSound, 1500);
   }
-
+  window.addEventListener('pagehide', stopSound);
   function update(state) {
     document.documentElement.dataset.distortion = String(state.distortionLevel);
     document.querySelector('#integrity').textContent = state.distortionLevel ? 'Interface integrity: minor variance' : 'Interface integrity: nominal';
@@ -28,13 +28,12 @@ export function mountDistortion(store) {
     if (type === 'hilfer:case-reconciled') {
       document.documentElement.classList.add('microglitch');
       clearTimeout(timer);
-      timer = setTimeout(() => document.documentElement.classList.remove('microglitch'), 1400);
-      playGlitchSound();
+      timer = setTimeout(() => document.documentElement.classList.remove('microglitch'), 650);
+      playSound();
     }
     if (type === 'hilfer:progress-reset') {
-      clearTimeout(timer);
-      document.documentElement.classList.remove('microglitch');
-      stopGlitchSound();
+      clearTimeout(timer); document.documentElement.classList.remove('microglitch');
+      stopSound();
     }
   });
 }

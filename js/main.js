@@ -1,11 +1,12 @@
 import { createStore } from './core/store.js';
 import { mountRecords } from './apps/records-fixture.js';
 import { mountReconciliation } from './apps/reconciliation.js';
+import { mountMail } from './apps/emails.js';
 import { mountAI } from './apps/ai.js';
 import { mountDistortion } from './effects/distortion.js';
 
 async function boot() {
-  const [records, cases] = await Promise.all(['records', 'cases'].map(async name => {
+  const [records, cases, assistant, emails] = await Promise.all(['records', 'cases', 'assistant', 'emails'].map(async name => {
     const response = await fetch(`./data/${name}.json`);
     if (!response.ok) throw new Error(`Could not load ${name}`);
     return response.json();
@@ -32,7 +33,8 @@ async function boot() {
     return recordsApp.openRecord(recordId);
   }
   reconciliation = mountReconciliation(document.querySelector('#reconciliation-app'), store, { openRecord });
-  mountAI(document.querySelector('#ai-app'), store);
+  mountAI(document.querySelector('#ai-app'), store, assistant, { storage });
+  mountMail(document.querySelector('#emails-app'), emails, { storage, store, openRecord });
   mountDistortion(store);
   function update() {
     const state = store.getState();

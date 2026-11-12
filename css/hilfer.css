@@ -136,35 +136,9 @@ select { font: 11px Tahoma, sans-serif; min-width: 0; width: 100%; padding: 2px;
 :root[data-distortion="1"] #desktop { background-image: linear-gradient(#fdebe8, #fdebe8), var(--wallpaper-distorted); }
 :root[data-distortion="1"] #desktop::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg,transparent 0px,transparent 4px,#bcc69b08 5px); z-index: 99999; }
 :root[data-distortion="1"] .desktop-brand { text-shadow: 2px 0 #abb38355; transform: translateX(2px); }
-html.microglitch #desktop { animation: microglitch-screen 1.4s steps(1) 1; }
-html.microglitch #desktop::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 99999;
-  pointer-events: none;
-  background: repeating-linear-gradient(0deg, transparent 0 13px, #7d1d2b66 14px 18px, transparent 19px 31px);
-  animation: microglitch-bands 1.4s steps(1) 1;
-}
-@keyframes microglitch-screen {
-  0%, 100% { filter: none; transform: none; }
-  8%, 18% { filter: contrast(1.28) saturate(.55) sepia(.18); transform: translateX(6px); }
-  22% { filter: contrast(1.4) hue-rotate(12deg); transform: translateX(-7px); }
-  34% { filter: contrast(1.18) saturate(.7); transform: translate(4px, 2px); }
-  48% { filter: none; transform: none; }
-  58% { filter: contrast(1.24) sepia(.14); transform: translateX(-4px); }
-  68%, 100% { filter: none; transform: none; }
-}
-@keyframes microglitch-bands {
-  0%, 100% { opacity: 0; transform: none; }
-  8%, 20% { opacity: 1; transform: translateY(-18px); }
-  22%, 38% { opacity: .8; transform: translateY(22px); }
-  58%, 66% { opacity: .55; transform: translateY(-8px); }
-}
-@media (prefers-reduced-motion: reduce) {
-  html.microglitch #desktop { animation: none; filter: contrast(1.18) sepia(.14); }
-  html.microglitch #desktop::before { animation: none; opacity: .45; }
-}
+html.microglitch #desktop { animation: microglitch .65s steps(1) 1; }
+@keyframes microglitch { 15% { filter: sepia(.3); transform: translateX(2px); } 30% { transform: translateX(-2px); } 55% { filter: contrast(1.12); transform: translateY(1px); } 75% { transform: none; } }
+@media (prefers-reduced-motion: reduce) { html.microglitch #desktop { animation: none; } }
 @media (max-width: 700px) {
   .window { width: calc(100vw - 12px) !important; height: calc(100dvh - 74px) !important; }
   .reconciliation-layout { grid-template-columns: 95px minmax(0,1fr); }

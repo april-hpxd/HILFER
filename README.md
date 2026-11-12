@@ -7,16 +7,14 @@ A playable institutional-horror prototype inside a fictional corporate Windows 9
 From this folder:
 
 ```sh
-python -m http.server 8080 --bind 127.0.0.1
+python scripts/serve.py --port 8080
 ```
 
-Open [HILFER locally](http://127.0.0.1:8080). No build or packages required. Use a modern desktop browser; keyboard users can attach evidence by ID.
+Open [HILFER locally](http://127.0.0.1:8080). No build or packages required. Use a modern desktop browser; keyboard navigation is supported throughout the investigative interface.
 
 Open **Reconciliation** to inspect the initial unverified personnel entry (AVAILABLE / HR-014). Then open **Records** and inspect Jessica's HR and Occupational Health forms. Select the work-clearance claim inside a document to compare it with the existing report entry. Choose **Use OH-008 in report** to file the supported correction (NOT_CLEARED). The living report updates immediately; the first glitch and next case unlock. No dragging, dropdowns, or separate Commit button are required. Reload preserves progress. **Start → Reset Demo Progress** starts over.
 
-The **AI Assistant** tab is a scripted placeholder. Its profile starts with the supplied portrait and switches to its slightly distorted version after the first case triggers the workstation glitch. Its optional **Read aloud** control uses built-in browser speech synthesis; available voices depend on the browser and operating system.
-
-Only CASE-001 is playable. CASE-002 is an explicit unlocked placeholder. Clearance does not establish the cause of illness. The shell uses Arwa's graphics from Altynai's adaptation; [asset credits and provenance](assets/arwa/CREDITS.md).
+The **HILFER Assistant** is scripted correspondence that reflects assignment, investigation, and filing state; it is not a live AI service. HILFER Mail provides the approved demo mailbox and archive. Only CASE-001 is playable. CASE-002 is an explicit unlocked placeholder. Clearance does not establish the cause of illness. The shell uses Arwa's graphics from Altynai's adaptation; [asset credits and provenance](assets/arwa/CREDITS.md). The personnel portrait remains a neutral placeholder.
 
 ## Checks and integration
 

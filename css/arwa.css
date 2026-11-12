@@ -133,9 +133,11 @@
 .start-menu-item { color: #4b3032; }
 .start-menu-item:hover { background: #853d46; color: #fff; }
 .start-menu-item[data-open]::before, .taskbar-item::before { content: ''; display: inline-block; width: 16px; height: 16px; flex: none; margin-right: 5px; background: center / contain no-repeat var(--art-settings); vertical-align: middle; }
-[data-open="records"]::before, .taskbar-item[data-window="records"]::before { background-image: var(--art-records); }
-[data-open="ai"]::before, .taskbar-item[data-window="ai"]::before { background-image: var(--art-ai); }
-[data-open="reconciliation"]::before, .taskbar-item[data-window="reconciliation"]::before { background-image: var(--art-reconciliation); }
+.start-menu-item[data-open="records"]::before, .taskbar-item[data-window="records"]::before { background-image: var(--art-records); }
+.start-menu-item[data-open="ai"]::before, .taskbar-item[data-window="ai"]::before { background-image: var(--art-ai); }
+.start-menu-item[data-open="reconciliation"]::before, .taskbar-item[data-window="reconciliation"]::before { background-image: var(--art-reconciliation); }
+.start-menu-item[data-open="records"]::before, .taskbar-item[data-window="records"]::before { background-image: var(--art-records); }
+.start-menu-item[data-open="reconciliation"]::before, .taskbar-item[data-window="reconciliation"]::before { background-image: var(--art-reconciliation); }
 .taskbar-item { background: #ca9b97; border-color: #e6beb8; color: #402a2c; }
 .taskbar-item.active { background: #e7c4be; }
 .clock { color: #462e2f; border-color: #c69792; }
@@ -193,6 +195,20 @@ body, body * { font-family: Tahoma, sans-serif !important; }
   .desktop-icons .icon-image { width: 36px; height: 36px; }
   .desktop-icons .icon-text { font-size: 8px; }
 }
+.report-letterhead, .document-heading { background: right 4px center / 38px 38px no-repeat var(--art-logo); padding-right: 45px; }
+:root[data-distortion="1"] .desktop-brand { transform: none; text-shadow: none; }
+:root[data-distortion="1"] .desktop-logo { filter: sepia(.15) contrast(1.08); opacity: .8; }
+:root[data-distortion="1"] #desktop::after { background: repeating-linear-gradient(0deg, transparent 0 4px, #56242a0a 4px 5px); }
+@media (max-width: 700px) { .desktop-brand { display: grid; } }
+
+/* Graphite assets use the supplied pixel icons and need the white backing blended out. */
+.window-title::before, .taskbar-item::before, .start-menu-item[data-open]::before, .icon-image { image-rendering: pixelated; }
+#emails-window .window-title::before { background-image: var(--art-mail); }
+[data-open="emails"]::before, .taskbar-item[data-window="emails"]::before { background-image: var(--art-mail); }
+.folder-tree button:has(.department-icon) { gap: 4px; }
+.department-icon { display: inline-block; flex: 0 0 20px; width: 20px; height: 20px; background-position: center; background-size: contain; background-repeat: no-repeat; image-rendering: pixelated; }
+.display-logo-control { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 11px; }
+.display-logo-control button { padding: 3px 6px; font-size: 11px; }
 
 /* Impeccable polish: preserve the existing desktop, improve reading and control states. */
 .pane-label, .preview-reference { font-size: 11px; }
@@ -243,3 +259,9 @@ input, select { caret-color: var(--control-focus); }
 .session-status span:empty { display: none; }
 .preview-empty-sheet { display: none; }
 @media (max-width: 450px) { .report-control { flex-wrap: wrap; } }
+:root[data-theme="archive"] [data-art],
+:root[data-theme="archive"] .department-icon,
+:root[data-theme="archive"] .file-symbol,
+:root[data-theme="archive"] .window-title::before,
+:root[data-theme="archive"] .start-menu-item[data-open]::before,
+:root[data-theme="archive"] .taskbar-item::before { mix-blend-mode: multiply; }

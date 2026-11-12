@@ -45,43 +45,30 @@ try {
     select.dispatchEvent(new Event('change', {bubbles:true}));
   });
   const archiveArt = await page.locator('.desktop-icons .icon-image').evaluateAll(els => els.map(el => getComputedStyle(el).backgroundImage));
-  assert.ok(archiveArt.every(image => /not(?:%20| )saturated/.test(image)), 'graphite uses all muted desktop icons');
-  assert.match(await page.locator('.desktop-logo').evaluate(el => getComputedStyle(el).backgroundImage), /not(?:%20| )saturated.*logo_pixelated\.png/);
+  assert.ok(archiveArt.every(image => /not(?:%20| )saturated|graphite\.webp/.test(image)), 'graphite uses all muted desktop icons');
+  assert.match(await page.locator('.desktop-logo').evaluate(el => getComputedStyle(el).backgroundImage), /logo-graphite\.webp/);
   assert.ok(await page.locator('.desktop-icons .icon-image').evaluateAll(els => els.every(el => getComputedStyle(el).mixBlendMode === 'multiply')), 'graphite blends white icon backdrops into the desktop');
   for (const id of ['ai', 'themes']) {
     const bounds = await page.locator(`.desktop-icons [data-open="${id}"]`).boundingBox();
     assert.ok(bounds.x > 1440 * 0.7, `${id} sits in the open right-hand desktop area`);
     assert.ok(bounds.y + bounds.height < 1000 - 58, `${id} stays above the taskbar`);
   }
-  assert.match(await page.locator('.file-symbol').first().evaluate(el => getComputedStyle(el).backgroundImage), /not(?:%20| )saturated/, 'graphite also changes the record-list file icon');
+  assert.match(await page.locator('.file-symbol').first().evaluate(el => getComputedStyle(el).backgroundImage), /file-graphite\.webp/, 'graphite also changes the record-list file icon');
   assert.equal(await page.locator('.file-symbol').first().evaluate(el => getComputedStyle(el).mixBlendMode), 'multiply');
   await page.locator('#display-theme').evaluate(select => {
     select.value = 'default';
     select.dispatchEvent(new Event('change', {bubbles:true}));
   });
   const standardArt = await page.locator('.desktop-icons .icon-image').evaluateAll(els => els.map(el => getComputedStyle(el).backgroundImage));
-  assert.ok(standardArt.every(image => /saturated/.test(image) && !/not(?:%20| )saturated/.test(image)), 'standard uses saturated desktop icons');
+  assert.ok(standardArt.every(image => /\/saturated\/|-pixel\.webp/.test(image) && !/not(?:%20| )saturated|graphite\.webp/.test(image)), 'standard uses saturated desktop icons');
   assert.ok(await page.locator('.desktop-icons .icon-image').evaluateAll(els => els.every(el => getComputedStyle(el).mixBlendMode === 'normal')), 'standard icon artwork is unchanged');
-  assert.match(await page.locator('.file-symbol').first().evaluate(el => getComputedStyle(el).backgroundImage), /saturated/);
+  assert.match(await page.locator('.file-symbol').first().evaluate(el => getComputedStyle(el).backgroundImage), /file-pixel\.webp/);
   for (const asset of ['reconciliation', 'records', 'terminal', 'settings', 'file']) {
     assert.equal((await page.request.get(new URL('/assets/arwa/saturated/' + asset + '.png', target).href)).status(), 200);
   }
   assert.equal((await page.request.get(new URL('/assets/arwa/saturated/downloads.png', target).href)).status(), 200);
   assert.equal((await page.request.get(new URL('/assets/arwa/not%20saturated/downloads.png', target).href)).status(), 200);
   const report = page.locator('[data-report-section="CASE-001"]');
-  await page.locator('.start-button').click();
-  await page.locator('.start-menu-item[data-open="ai"]').click();
-  assert.ok(await page.locator('#ai-window').isVisible());
-  assert.equal(await page.locator('.ai-avatar').getAttribute('src'), './assets/arwa/ai_states/ai1.png');
-  assert.equal((await page.request.get(new URL('/assets/arwa/ai_states/ai1.png', target).href)).status(), 200);
-  assert.equal((await page.request.get(new URL('/assets/arwa/ai_states/ai2.png', target).href)).status(), 200);
-  assert.match(await page.locator('.ai-transcript').innerText(), /fixed, prewritten messages/);
-  await page.locator('[data-ai-next]').click();
-  assert.match(await page.locator('.ai-transcript').innerText(), /Consolidated Report/);
-  await page.locator('[data-ai-next]').click();
-  assert.match(await page.locator('.ai-transcript').innerText(), /source document/);
-  assert.equal(await page.locator('[data-ai-next]').isDisabled(), true);
-
   await page.locator('[data-open="reconciliation"]').first().click();
   assert.equal(await page.locator('#report-tab').getAttribute('aria-selected'), 'true');
   for (const text of ['Available for duty', 'Human Resources', 'Unverified']) assert.ok((await report.textContent()).includes(text));
@@ -138,9 +125,6 @@ try {
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 1);
   assert.ok(await page.evaluate(() => hilfer.getState().unlockedCaseIds.includes('CASE-002')));
   assert.equal(await page.locator('html').getAttribute('data-distortion'), '1');
-  assert.equal(await page.locator('.ai-avatar').getAttribute('src'), './assets/arwa/ai_states/ai2.png');
-  assert.equal(await page.locator('.ai-avatar').getAttribute('alt'), 'HILFER Assistant profile, slightly distorted');
-  assert.equal(await page.locator('.ai-avatar').evaluate(el => getComputedStyle(el).filter), 'none');
   assert.ok(await page.locator('html').evaluate(el => el.classList.contains('microglitch')));
   await page.waitForFunction(() => !document.documentElement.classList.contains('microglitch'));
   await page.evaluate(() => hilfer.reconcileClaim('CASE-001', 'OH-008', 'workEligibility'));
@@ -160,13 +144,11 @@ try {
   assert.ok(await page.locator('#records-window').evaluate(el => el.classList.contains('active')));
   await page.reload(); await page.waitForFunction(() => window.hilfer);
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 1);
-  assert.equal(await page.locator('.ai-avatar').getAttribute('src'), './assets/arwa/ai_states/ai2.png');
   assert.match(await page.locator('[data-report-section="CASE-001"]').textContent(), /NOT_CLEARED/);
   await page.locator('.start-button').click();
   await page.locator('#reset-progress').click();
   assert.equal(await page.evaluate(() => hilfer.getState().completedCaseIds.length), 0);
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 0);
-  assert.equal(await page.locator('.ai-avatar').getAttribute('src'), './assets/arwa/ai_states/ai1.png');
   await page.locator('[data-open="reconciliation"]').first().click();
   for (const text of ['Available for duty', 'Unverified']) assert.ok((await report.textContent()).includes(text));
 

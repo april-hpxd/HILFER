@@ -6,7 +6,7 @@
 
 From the repository root:
 
-    python -m http.server 8080 --bind 127.0.0.1
+    python scripts/serve.py --port 8080
 
 Open http://127.0.0.1:8080. Node 18+ runs domain tests with `node --test` / `npm test`. Optional browser checks: `node tests/browser.check.js` with Playwright and Microsoft Edge installed. `HILFER_URL` defaults to localhost:8080, `HILFER_PLAYWRIGHT_MODULE` can specify the local Playwright package, and `HILFER_SCREENSHOT` controls the screenshot path.
 
@@ -44,12 +44,6 @@ The Records adapter is `mountRecords(root, store, {onClaim})` from `js/apps/reco
 
 Reconciliation is `mountReconciliation(root, store, {openRecord})` from `js/apps/reconciliation.js`, returning `focusComparison()`, `presentClaim(recordId,field)`, `getActiveCaseId()` and `showReport()`. `js/main.js` bridges Records' `onClaim` to Reconciliation's `presentClaim`, then focuses the Reconciliation window. The link back to Records is `openRecord(id)`, which clears search filters and opens the requested source. `window.hilfer` exposes the store and Reconciliation APIs for development and tests.
 
-### AI Assistant placeholder
-
-The desktop and Start menu open the scripted `AI Assistant` in `js/apps/ai.js`. It is not a live AI service: its fixed demonstration lines provide basic navigation guidance without adding story revelations. The generic portrait in `assets/placeholders/personnel.svg` is temporary. Its CSS distortion reads the existing root `data-distortion` level, which is advanced by reconciliation milestones; it does not use random effects or add a new progress store.
-
-The optional **Read aloud** control uses the browser's built-in Web Speech API (`speechSynthesis`) only after a user click. It is disabled with an explanation when unsupported, and speech is stopped when another line is selected, the app closes, or the page unloads. The browser's voice and pronunciation vary by OS; use authored, prerecorded audio later if voice performance and consistency become part of the story. No audio service or package is needed for this prototype.
-
 ### Claim workflow contract
 
 `Records → onClaim(recordId, field) → Reconciliation.presentClaim(...)`
@@ -83,11 +77,11 @@ Milestone events are delivered by `store.onEvent` after state changes:
 | `hilfer:distortion-changed` | `{previousLevel,level}` |
 | `hilfer:progress-reset` | `{}` |
 
-The distortion module listens for reconciliation milestones, not clicks or elapsed browser time. Replaying the same filed case must not duplicate milestones. The first reconciliation milestone shows a brief 1.4-second visual glitch and plays the first 1.5 seconds of `assets/sounds/glitch.mp3`; reset stops the cue. The longer static-humming track remains unused so ordinary investigation stays quiet and does not depend on autoplay.
+The distortion module listens for reconciliation milestones, not clicks or elapsed browser time. Replaying the same filed case must not duplicate milestones.
 
 ## Asset boundaries
 
-Original art is in `assets/arwa/`, with provenance and usage guidance in `assets/arwa/CREDITS.md`. `css/assets.css` centralizes shell asset paths; Standard uses `assets/arwa/saturated/`, and Archive / Graphite switches desktop icons and the HILFER mark to the matching files in `assets/arwa/not saturated/`. `css/arwa.css` styles the shell, and `css/hilfer.css` supplies game document layouts, claim comparisons and effects. Original upstream desktop snapshot in `references/WIN98-template/` remains unchanged.
+Original art is in `assets/arwa/`, with provenance and usage guidance in `assets/arwa/CREDITS.md`. `css/assets.css` centralizes shell asset paths; `css/arwa.css` styles the shell, and `css/hilfer.css` supplies game document layouts, claim comparisons and effects. Original upstream desktop snapshot in `references/WIN98-template/` remains unchanged.
 
 The initial medical/HR document graphics are placeholders pending Arwa's application-specific work. Prioritize legibility and believable paper/report composition, not more instructions or giant panels.
 
@@ -105,3 +99,38 @@ The original store still validates ID-based attachment and explicit submission; 
 ## Editorial presentation
 
 `js/apps/shared.js` formats display values, dates and document titles. Canonical enums, IDs and save data stay unchanged. Records prioritizes employee, document type and issued date; exact references and classifications live in native **Record details** disclosures. The report shows readable status/source/context, with audit provenance inside details. Technical placeholders are omitted from report rendering only; progression and the case register retain them.
+## Contextual HILFER Assistant (demo)
+
+`data/assistant.json` owns English correspondence for the configured case. `deriveAssistant(state, records, content)` in `js/apps/ai.js` projects welcome, investigating (relevant evidence discovered) and filed (committed resolution) phases. `mountAI` uses the existing store subscriptions/events; it never changes evidence, resolutions or progression. There is no LLM or Next-message sequence.
+
+The shell dispatches `hilfer:window-activated` on `window` with `{windowId}` when a window gains focus. Opening/activating `ai` acknowledges its visible update. The discrete taskbar notification remains available while unread, including after reload. Only a versioned UI receipt (`hilfer:assistant:v1`, `{version:1,readId}`) is persisted separately; it is not game state. Demo reset clears the receipt and derives the welcome phase again. Unavailable storage retains session behavior.
+
+The existing `hilfer:case-reconciled` event plays the imported glitch cue at 20% volume for at most 1.5 seconds. The visual microglitch remains 650 ms. Reload/duplicate submissions do not emit another cue; reset/page exit stops playback. Rejected audio playback never interrupts filing or assistant notification.
+
+Checks: `node --test`, existing `node tests/browser.check.js`, and `node tests/assistant.browser.check.js` (same Playwright/Edge environment variables). The assistant check covers fresh play, contextual messages, actual audio start/stop, unread/read reloads, reset/replay, rejected audio, portrait variance, window controls and mobile notification access.
+
+## Graphite appearance
+
+Display Properties → Color scheme → Archive / Graphite switches to Arwa's desaturated artwork across desktop, title bars, taskbar, Start, department folders, record-file glyphs and the logo. Asset choices live in `css/assets.css`; the palette and Altynai's multiply treatment live in `css/arwa.css`. Theme selection is independent of gameplay/distortion and uses the existing session-only selector. Distortion aliases retain the selected theme; returning to Standard restores its original art. `node tests/theme.browser.check.js` checks both directions, actual Jessica reconciliation, reload and mobile.
+
+Display Properties also offers **Use original logo / Use pixelated logo** for live demo comparisons. It sets presentation-only `data-logo-style` on the root and overrides `--art-desktop-logo`; paper/Start logos are unaffected. An explicit choice remains through color-scheme changes during the session, using the matching pixel variant when appropriate. Reload restores the scheme defaults; no game/save state is changed.
+
+## HILFER Mail
+
+The fixed corpus is `data/emails.json`, copied without content changes from `hilfer_mail_demo_v1.json` (5 threads, 12 messages). [MAIL_CONTRACT.md](MAIL_CONTRACT.md) preserves the supplied contract. All message dates are provisional demo timestamps, not approved chronology; Inbox contains 3 conversations, Corporate Archive 2, and Sent Mail is intentionally empty. This is the authorized Reconciliation Desk mailbox/archive, not a personal account. No Compose, outgoing mail, attachments or new narrative messages are implemented.
+
+`js/apps/emails.js` exports `validateMailCorpus`, `createMailModel` and `mountMail`. The model defaults to the corpus's `initialGrants`; `requiredGrants` gates list/search/count/lookup/open/reference access before results are returned. `setGrants(grants)` is the future integration seam and clears unauthorized selection/receipts; no progression unlocks are invented. These are gameplay authorization rules in a static app, not a server-side confidentiality boundary for private data.
+
+`listMessages()`, `selectMessage(id)`, `openMessage(id)`, `setMessageRead(id,read)`, `getMessage(id)`, `getReference(messageId,recordId)`, `setFolder(id)`, `setQuery(text)`, `getFolders()`, `getState()` and `subscribe(fn)` own only Mail UI. The classic table has one row per authorized message, sorted newest first by the supplied local timestamp; search matches individual messages across authorized folders. Selection does not read a message; opening does. Legacy conversation APIs (`listThreads`, `getThread`, `openThread`, `markUnread`) remain for integration compatibility. Search, selection and rendering never call game discovery; only the supplied MAIL-004 reference navigates through existing `openRecord('HR-014')` and normal Records inspection. No OH-008 shortcut or finding is added to Mail.
+
+Read IDs/folder/selected thread and optional selected message ID persist under `hilfer:mail-ui:v1` with version 1, independently of game/Assistant saves. Invalid or inaccessible storage falls back to safe in-memory reading. `hilfer:progress-reset` clears Mail receipts, query and selection. Keyboard: arrows/Home/End select table rows or folders without reading; Enter opens the selected message, Ctrl+F focuses search, Escape closes a message or menu. Tab/Enter operate native menus, controls and Records links.
+
+Checks: `node --test` includes fixed-corpus hash, reference/anchor validation, sorting, access denial/direct lookups/counts, revoked grants, receipt persistence/reset/blocked storage and game-state separation. `node tests/mail.browser.check.js` verifies all 12 exact bodies and metadata, five conversations, empty Sent, search, HR-014 navigation and Jessica, reload/reset, restricted fixture, keyboard/mobile/Graphite, malformed/blocked receipts and window controls.
+
+The standard-library static launcher `scripts/serve.py` (also `npm start`) uses a larger connection accept queue. Default Python HTTP-server backlog intermittently refused simultaneous startup asset requests on this Windows host; five cold boots passed with the increased queue. It serves only static files from the repository, binds localhost and adds no runtime backend or dependency.
+
+### Classic Mail windows (second UI iteration)
+
+The two supplied reference images govern layout only; their mockup folders/messages were not imported. Mail now has a menu bar, disabled unsupported outgoing actions, a beveled toolbar, a left folder tree, and a message table (state/From/Subject/Received) with no preview. Counts and read icons are per-message; the legacy conversation counts remain available in the model. Prev/Next select rows; Open or double-click/Enter opens the actual message. On narrow screens the table scrolls horizontally instead of dropping columns or shrinking text.
+
+Each reader is a `.window` under `#desktop` registered through existing `openWindow`/`closeWindow`, drag/resize/control/focus/taskbar handling. One reader per message is reused; different messages coexist, survive closing Mail, and show their real subject in title/taskbar. The shell resolves dynamic titles from `.window-title` and emits `hilfer:window-closed` with `{windowId}`. Readers use 14px text and independent body scrolling. Reset removes every reader; permission revocation also removes unauthorized readers. Open windows themselves are not restored after reload, while receipts and selection remain compatible with v1 saves.
