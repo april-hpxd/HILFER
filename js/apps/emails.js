@@ -199,8 +199,9 @@ function snippet(body) {
 
 function renderConversation(thread, expandedId) {
   return thread.messages.map(message => {
+    const initials = message.from.name.split(/\s+/).slice(0, 2).map(part => [...part][0]).join('');
     return `<details class="mail-thread-message" data-message-id="${h(message.id)}" ${message.id === expandedId ? 'open' : ''}>
-      <summary><b>${h(message.from.name)}</b>
+      <summary><span class="mail-avatar" aria-hidden="true">${h(initials)}</span><b>${h(message.from.name)}</b>
         <time datetime="${h(message.sentAt)}">${h(mailDate(message.sentAt))}</time>
         <span class="mail-collapsed-preview">${h(snippet(message.body))}</span></summary>
       <div class="mail-thread-body">${renderMailMessage(message, message.subject ?? thread.subject, true)}</div>
@@ -256,7 +257,7 @@ export function mountMail(root, corpus, { storage, store, openRecord }) {
       const title = row.subject;
       node.setAttribute('aria-label',title);
       const narrow=window.innerWidth<=700;
-      const width = Math.min(620,window.innerWidth-12), height = narrow ? window.innerHeight-48 : Math.min(390,window.innerHeight-48), offset = threadWindows.size % 5 * 28;
+      const width = Math.min(620,window.innerWidth-12), height = narrow ? window.innerHeight-48 : Math.min(475,window.innerHeight-48), offset = threadWindows.size % 5 * 28;
       Object.assign(node.style,{width:width+'px',height:height+'px',left:Math.max(6,Math.min(225+offset,window.innerWidth-width-12))+'px',top:(narrow ? 10 : Math.max(10,Math.min(145+offset,window.innerHeight-height-42)))+'px'});
       node.innerHTML = `<div class="window-header"><span class="window-title">${h(title)}</span><div class="window-controls"><button class="window-button" data-control="minimize" aria-label="Minimize ${h(title)}"></button><button class="window-button" data-control="maximize" aria-label="Maximize ${h(title)}"></button><button class="window-button close-btn" data-control="close" aria-label="Close ${h(title)}"></button></div></div><div class="window-content mail-message-content mail-thread-content" tabindex="-1"></div>`;
       node.addEventListener('click',event=>{
