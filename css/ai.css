@@ -44,6 +44,8 @@
   pointer-events: none;
 }
 .assistant-balloon[hidden], #assistant-notification[hidden] { display: none; }
+.assistant-balloon[data-passive] { pointer-events: none; }
+.assistant-balloon[data-passive] button { pointer-events: auto; }
 .ai-profile { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 7px 9px 4px; }
 .ai-profile h1 { margin: 0; font: bold 12px var(--font-ui); }
 .ai-profile button, .ai-actions button, #assistant-notification { padding: 4px 7px; font: 11px var(--font-ui); }

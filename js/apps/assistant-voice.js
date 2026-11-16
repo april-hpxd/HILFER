@@ -30,15 +30,15 @@ export function createAssistantVoice(storage, caseId, {
       completed.clear();
       try { storage?.removeItem(key); } catch { /* Session reset still works. */ }
     },
-    play(cue, {onError = () => {}} = {}) {
-      if (!audio || !cue || completed.has(cue.id) || activeId === cue.id) return;
+    play(cue, {onError = () => {}, onEnded = () => {}} = {}) {
+      if (!audio || !cue || completed.has(cue.id) || activeId !== null) return;
       stop();
       const token = run;
       activeId = cue.id;
-      const fail = () => {
+      const fail = error => {
         if (token !== run) return;
         stop();
-        onError();
+        onError(error);
       };
       audio.onended = () => {
         if (token !== run) return;
@@ -47,11 +47,12 @@ export function createAssistantVoice(storage, caseId, {
         try {
           storage?.setItem(key, JSON.stringify({version:1, caseId, completedIds:[...completed]}));
         } catch { /* Session checkpoint still works. */ }
+        onEnded();
       };
       audio.onerror = fail;
       audio.src = cue.src;
       // Start within the gesture that opened the balloon.
-      try { audio.play()?.catch(fail); } catch { fail(); }
+      try { audio.play()?.catch(fail); } catch (error) { fail(error); }
     }
   };
 }

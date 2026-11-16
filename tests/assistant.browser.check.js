@@ -62,13 +62,20 @@ try {
   const balloon = page.locator('#assistant-balloon');
   const launcher = page.locator('#assistant-portrait');
   assert.ok(await launcher.isVisible());
-  assert.ok(await balloon.isHidden(), 'the Assistant does not greet automatically');
+  assert.ok(await balloon.isVisible(), 'assignment delivery opens the balloon without a click');
+  assert.ok(await page.locator('.ai-transcript').evaluate(el => el !== document.activeElement));
   assert.equal(await page.evaluate(() => window.assistantAudio), undefined);
-  await launcher.click();
-  assert.ok(await balloon.isVisible());
+  await page.mouse.click(1200, 80);
   await page.waitForFunction(() => window.assistantAudio?.currentTime > 0);
   assert.match(await page.evaluate(() => assistantAudio.src), /welcome-v3\.mp3$/);
   assert.equal(await balloon.getByRole('button', {name:'Mute'}).count(), 0);
+  await page.getByRole('button', {name:'Dismiss Assistant'}).click();
+  assert.ok(await balloon.isHidden());
+  assert.ok(await page.evaluate(() => !assistantAudio.paused), 'dismissing the balloon leaves playback running');
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('hilfer:assistant-dialogue', {detail:{signal:'assignment.available'}})));
+  assert.ok(await balloon.isHidden(), 'duplicate delivery does not reopen the balloon');
+  await launcher.click();
+  assert.equal(await page.evaluate(() => assistantPlays), 1);
   await page.waitForFunction(() => assistantAudio.ended);
   await page.waitForFunction(() => JSON.parse(localStorage.getItem('hilfer:assistant-dialogue:v1')).completedIds.includes('welcome-v3'));
   await launcher.click();
@@ -88,6 +95,7 @@ try {
   assert.ok(await page.locator('#assistant-notification').isHidden());
   assert.ok(await page.locator('#glitch-sound').evaluate(el => el.paused && el.currentTime === 0));
   await observe(page); await fileJessica(page);
+  assert.ok(await balloon.isVisible(), 'filing opens the balloon without an Assistant click');
   assert.ok(await page.locator('#assistant-notification').isVisible());
   assert.deepEqual(await page.evaluate(() => hilfer.getState().completedCaseIds), ['CASE-001']);
   await page.waitForFunction(() => cuePlays === 1);
@@ -100,6 +108,7 @@ try {
   // Unread correspondence survives reload without replaying audiovisual rewards.
   await page.reload(); await ready(page);
   assert.ok(await page.locator('#assistant-notification').isVisible());
+  assert.ok(await balloon.isHidden(), 'reload does not repeat a delivered popup');
   assert.match(await portrait.getAttribute('src'), /\/assistant-distorted\.webp$/);
   assert.equal(await portrait.evaluate(async img => { await img.decode(); return img.naturalWidth; }), 174);
   assert.ok(await page.locator('#glitch-sound').evaluate(el => el.paused && el.currentTime === 0));

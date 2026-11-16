@@ -10,7 +10,7 @@ export function deriveAssistant(state, records, content) {
   const signal = filed ? 'case.report-filed' : investigating ? 'case.review-started' : 'assignment.available';
   const entry = content.dialogue.find(message => message.on === signal);
   const welcome = content.dialogue.find(message => message.on === 'assignment.available');
-  return { phase, messages: [...new Set([welcome, entry])].filter(Boolean),
+  return { phase, signal, messages: [...new Set([welcome, entry])].filter(Boolean),
     voice: entry?.voice ?? null,
     notificationId: filed ? content.caseId + ':reconciled' : null };
 }
@@ -52,31 +52,64 @@ export function mountAI(root, store, content, { storage } = {}) {
   const balloon = root.querySelector('#assistant-balloon');
   const log = root.querySelector('.ai-transcript');
   const voice = createAssistantVoice(storage, content.caseId);
+  const deliveryKey = 'hilfer:assistant-delivery:v1';
+  const delivered = new Set();
+  try {
+    const saved = JSON.parse(storage?.getItem(deliveryKey) ?? 'null');
+    if (saved?.caseId === content.caseId && Array.isArray(saved.signals)) {
+      for (const signal of saved.signals) if (content.dialogue.some(entry => entry.on === signal)) delivered.add(signal);
+    }
+  } catch { /* Delivery still deduplicates in this session. */ }
+  const history = new Set();
   let voiceCue = null;
+  let needsGesture = false;
   function speakPending() {
-    if (balloon.hidden || document.hidden) return;
+    if (!voiceCue || document.hidden) return;
+    if (navigator.userActivation?.hasBeenActive === false) { needsGesture = true; return; }
     voice.play(voiceCue, {
-      onError: () => { announcement.textContent = 'Voice unavailable.'; }
+      onEnded: speakPending,
+      onError(error) {
+        needsGesture = error?.name === 'NotAllowedError';
+        if (!needsGesture) announcement.textContent = 'Voice unavailable.';
+      }
     });
   }
   const portrait = root.querySelector('.ai-avatar');
   let previousPhase;
   let wasUnread = false;
+  function renderHistory() {
+    log.innerHTML = [...history].map(message => `<section class="ai-message"><h2>${h(message.label)}</h2><p>${h(message.text)}</p></section>`).join('');
+    log.scrollTop = log.scrollHeight;
+  }
+  function deliver(signal) {
+    const entry = content.dialogue.find(message => message.on === signal);
+    if (!entry || delivered.has(signal)) return;
+    delivered.add(signal);
+    try {
+      storage?.setItem(deliveryKey, JSON.stringify({caseId:content.caseId, signals:[...delivered]}));
+    } catch { /* Delivery still deduplicates in this session. */ }
+    history.add(entry);
+    voiceCue = entry.voice ?? null;
+    renderHistory();
+    setOpen(true, false);
+    speakPending();
+  }
   function update() {
     const state = store.getState();
     const model = deriveAssistant(state, store.getRecords(), content);
     const face = state.distortionLevel > 0 ? 'assistant-distorted' : 'assistant';
     const portraitSrc = `assets/arwa/portraits/${face}.webp`;
     if (portrait.getAttribute('src') !== portraitSrc) portrait.src = portraitSrc;
-    if (model.phase !== previousPhase) {
-      voice.stop();
+    if (model.phase !== previousPhase && (model.phase !== 'welcome' || !previousPhase)) {
+      if (!previousPhase) {
+        for (const signal of delivered) history.add(content.dialogue.find(message => message.on === signal));
+      }
+      for (const message of model.messages) history.add(message);
       voiceCue = model.voice;
-      log.innerHTML = model.messages.map(message => `<section class="ai-message"><h2>${h(message.label)}</h2><p>${h(message.text)}</p></section>`).join('');
-      log.scrollTop = log.scrollHeight;
       previousPhase = model.phase;
-      speakPending();
+      renderHistory();
+      deliver(model.signal);
     }
-    if (model.notificationId && !balloon.hidden) receipt.markRead();
     const unread = Boolean(model.notificationId) && !receipt.isRead();
     notification.hidden = !unread;
     if (unread !== wasUnread) announcement.textContent = unread ? 'HILFER Assistant has a report update.' : '';
@@ -84,11 +117,15 @@ export function mountAI(root, store, content, { storage } = {}) {
   }
   function setOpen(open, focus = true) {
     const justOpened = open && balloon.hidden;
-    if (!open) voice.stop();
     balloon.hidden = !open;
+    if (open && (justOpened || focus)) balloon.toggleAttribute('data-passive', !focus);
     launcher.setAttribute('aria-expanded', String(open));
     update();
-    if (justOpened) speakPending();
+    if (open && focus && previousPhase === 'filed') {
+      receipt.markRead();
+      update();
+    }
+    if (justOpened && focus) speakPending();
     if (open) log.scrollTop = log.scrollHeight;
     if (focus) (open ? log : launcher).focus({preventScroll: true});
   }
@@ -105,14 +142,29 @@ export function mountAI(root, store, content, { storage } = {}) {
     if (event.target.closest('[data-open]')) setOpen(false);
   });
   window.addEventListener('hilfer:assistant-open', () => setOpen(true));
+  window.addEventListener('hilfer:assistant-dialogue', ({detail}) => deliver(detail?.signal));
+  function retryVoice(event) {
+    if (!event.isTrusted || !needsGesture) return;
+    needsGesture = false;
+    speakPending();
+  }
+  document.addEventListener('click', retryVoice, true);
+  document.addEventListener('keydown', retryVoice, true);
   window.addEventListener('pagehide', voice.stop);
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) voice.stop();
-    else speakPending();
+    else if (!balloon.hidden) speakPending();
   });
   store.subscribe(update);
   store.onEvent(({ type }) => {
-    if (type === 'hilfer:progress-reset') { receipt.reset(); voice.reset(); setOpen(false, false); }
+    if (type === 'hilfer:progress-reset') {
+      receipt.reset();
+      voice.reset();
+      delivered.clear();
+      history.clear();
+      previousPhase = undefined;
+      update();
+    }
     if (type === 'hilfer:case-reconciled') update();
   });
   update();
