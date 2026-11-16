@@ -35,6 +35,9 @@ const closeMessage=async(page,id)=>{const node=messageWindow(page,id);await page
 try {
  const page=await browser.newPage({viewport:{width:1440,height:1000}});watch(page);await page.goto(target);await ready(page);
  const initial=await page.evaluate(()=>hilfer.getState());await open(page,'emails');
+ await page.waitForFunction(()=>document.querySelectorAll('.system-error-window').length>0);
+ assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('hilfer:glitches:v1')).triggered.includes('error_windows:mail-app')));
+ await page.waitForFunction(()=>document.querySelectorAll('.system-error-window').length===0,{timeout:5000});
  assert.equal(await page.locator('[data-mail-row]').count(),7);assert.equal(await page.locator('#mail-count').textContent(),'7 messages (7 unread)');
  assert.equal(await page.locator('#emails-app .mail-body').count(),0,'no integrated preview');
  await page.screenshot({path:join(tmpdir(),'hilfer-mail-classic-inbox.png')});
@@ -47,7 +50,6 @@ try {
  await page.waitForFunction(()=>document.querySelectorAll('.mail-message-window.glitch-window-echo').length===9,{timeout:5000});
  assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('hilfer:glitches:v1')).triggered.includes('email_multiplication:first-open')));
  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('hilfer:ai-state:v1')).state),2,'opening the first email advances portrait and wallpaper to stage 3');
- assert.equal(await page.locator('.system-error-window').count(),0,'the MAIL-010-specific error sequence does not run on other messages');
  assert.equal(await page.locator('#mail-count').textContent(),'7 messages (6 unread)');
  assert.ok(await page.locator('[data-mail-row="MAIL-005"]').evaluate(el=>el.classList.contains('mail-unread')),'opening one reply does not read its conversation');
  assert.equal(await page.locator('.taskbar-item[data-window="mail-message-MAIL-004"]').textContent(),sourceMessage('MAIL-004').subject);
@@ -88,9 +90,8 @@ try {
  for(const id of ['MAIL-008','MAIL-009','MAIL-010','MAIL-011','MAIL-012']){
   await show(page,id);await verifyMessage(page,id);
   if(id==='MAIL-010'){
-   await page.waitForFunction(()=>document.querySelectorAll('.system-error-window').length>0);
    assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('hilfer:glitches:v1')).triggered.includes('email_multiplication:first-open')));
-   assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('hilfer:glitches:v1')).triggered.includes('error_windows:MAIL-010')));
+   assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('hilfer:glitches:v1')).triggered.includes('error_windows:mail-app')));
   }
   await closeMessage(page,id);
  }

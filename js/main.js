@@ -47,6 +47,11 @@ async function boot() {
     storage, store, openRecord, glitch,
     onEmailGlitch: () => aiState.advance(2)
   });
+  window.addEventListener('hilfer:window-activated', ({ detail }) => {
+    if (detail.windowId === 'emails') {
+      glitch.triggerGlitch('error_windows', { key: 'error_windows:mail-app' });
+    }
+  });
   mountFootage(document.querySelector('#footage-app'));
   mountReports(document.querySelector('#reports-app'));
   mountDistortion(store);

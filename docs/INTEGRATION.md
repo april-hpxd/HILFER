@@ -143,18 +143,18 @@ unavailable storage degrades to in-session-only behavior, like the rest of the s
 Registered glitches: `desktop_distortion` (first glitch — see below), `email_multiplication`
 (visual duplicate windows, triggered on the first opened Mail message in `js/apps/emails.js`) and
 `error_windows` (a cascading, then rapidly self-closing, stack of system-error dialogs, with
-its own error sound). All only ever create transient DOM elements appended to `#desktop` with
+its own error sound, triggered on the first Mail-window activation in `js/main.js`). All only
+ever create transient DOM elements appended to `#desktop` with
 `inert` set where applicable (`desktop_distortion`'s overlay element, plus the echo/dialog
 windows of the other two); none are registered with `script.js`'s window manager (no taskbar
 entry, no real window ID, no focus/z-index persistence), so they cannot corrupt real window or
 Mail state.
 
-**`email_multiplication` triggers on the first opened Mail message**, regardless of folder;
-this makes the second glitch visible during normal inbox use. **`error_windows` remains tied to
-Tito's `MAIL-010`**. Each real message opens first; after a short delay, the applicable visual
-copies or transient system-error dialogs appear, play their supplied sounds, and clean
-themselves up. The actual Mail reader remains usable afterward. These are scoped presentation
-events, not new investigation mechanics.
+**`error_windows` triggers once when the Mail application is first activated**, before any
+message needs to be opened. `email_multiplication` separately triggers on the first opened Mail
+message, regardless of folder. The dialogs or duplicate readers appear after the real
+application/message is usable, play their supplied sounds, and clean themselves up. These are
+scoped presentation events, not new investigation mechanics.
 
 **`desktop_distortion` (first glitch) — re-added.** A previous iteration of this glitch was
 reverted at the user's request back to the plain `html.microglitch` flourish in

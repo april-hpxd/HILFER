@@ -131,10 +131,8 @@ const toolIcon = kind => {
   return `<svg class="mail-tool-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="${paths[kind]}"/></svg>`;
 };
 
-// The first opened message triggers email multiplication. MAIL-010 additionally triggers
-// the system-error sequence; both effects leave the real message usable.
-const ERROR_WINDOWS_MESSAGE_ID = 'MAIL-010';
-
+// The first opened message triggers email multiplication; the app-level error sequence is
+// wired to the Mail window activation in js/main.js.
 export function mountMail(root, corpus, { storage, store, openRecord, glitch, onEmailGlitch }) {
   const model = createMailModel(corpus, {storage,getRecord:store.getRecord});
   const mailbox = model.getMailbox(), messageWindows = new Map(), glitchTimers = new Map();
@@ -206,9 +204,6 @@ export function mountMail(root, corpus, { storage, store, openRecord, glitch, on
             payload: { sourceWindow: node }
           });
           if (fired) onEmailGlitch?.();
-          if (id === ERROR_WINDOWS_MESSAGE_ID) {
-            glitch.triggerGlitch('error_windows', { key: 'error_windows:' + id });
-          }
         }
       }, 180));
     }
