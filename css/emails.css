@@ -64,6 +64,9 @@
 }
 @media (pointer:coarse) { .mail-menubar > button, .mail-menu summary, .mail-folders button, .mail-search button { min-height:28px; } .mail-table tbody td { padding-top:7px; padding-bottom:7px; } }
 .mail-table .mail-from-column { width:190px; }
+@container mail (max-width:480px) {
+ .mail-table .mail-from-column { width:115px; }
+}
 .mail-snippet { font-weight:normal; opacity:.82; }
 .mail-thread-content { display:block; overflow:auto; background:var(--paper); }
 .mail-thread-message + .mail-thread-message { border-top:1px solid var(--ledger-rule-soft); }

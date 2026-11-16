@@ -63,8 +63,8 @@ export function mountReconciliation(root, store, { openRecord = () => {} } = {})
         '<div class="reconciliation-layout"><nav class="case-list" aria-label="Cases"><div class="pane-label">CASE REGISTER</div>' +
           cases.map(c => '<button type="button" data-case="' + h(c.id) + '" aria-pressed="' + (selectedCaseId === c.id) + '"><b>' + h(c.id) + '</b><span>' + h(c.title) + '</span><small>' + (state.completedCaseIds.includes(c.id) ? 'FILED' : !state.unlockedCaseIds.includes(c.id) ? 'LOCKED' : c.placeholder ? 'RESERVED' : 'OPEN') + '</small></button>').join('') +
         '</nav><div class="case-detail">' + showCase(selected, state) + '</div></div>') +
-      '</div><p class="feedback" data-tone="' + h(feedbackTone) + '" role="status" aria-live="polite">' +
-      h(feedback || (view === 'report' ? 'Report / work in progress' : 'Select a source in Records to amend an entry.')) + '</p>';
+      '</div><div class="feedback status-bar" data-tone="' + h(feedbackTone) + '" role="status" aria-live="polite"><span class="status-bar-field">' +
+      h(feedback || (view === 'report' ? 'Report / work in progress' : 'Select a source in Records to amend an entry.')) + '</span></div>';
     root.querySelectorAll('[data-audit-id]').forEach(el => { el.open = openDetails.includes(el.dataset.auditId); });
     if (previousFocus) root.querySelector('#' + previousFocus)?.focus({ preventScroll: true });
     if (view === 'report') root.querySelector('.report-scroll').scrollTop = scroll;

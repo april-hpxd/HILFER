@@ -44,7 +44,7 @@ export function mountRecords(root, store, { onClaim = () => {} } = {}) {
       <section class="files-pane" aria-label="Record list"><div class="pane-label">Documents</div><div id="record-files"></div></section>
       <section class="preview-pane" aria-label="Document preview"><div class="preview-reference" id="preview-reference">Document preview</div><div class="preview-scroll" id="record-preview"></div></section></div>
     <div class="preview-drag-bar" id="preview-drag-bar" hidden></div>
-    <div class="records-status"><span id="record-count"></span><span id="record-drag-hint">Read-only</span></div>`;
+    <div class="records-status status-bar"><span class="status-bar-field" id="record-count"></span><span class="status-bar-field" id="record-drag-hint">Read-only</span></div>`;
 
   function renderFiles() {
     const records = store.getRecords().filter(record => (!department || record.department === department) &&

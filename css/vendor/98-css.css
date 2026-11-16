@@ -117,13 +117,13 @@
   font-weight: normal;
 }
 
-#emails-app .status-bar {
+.window-content .status-bar {
   margin: 0px 1px;
   display: flex;
   gap: 1px;
 }
 
-#emails-app .status-bar-field {
+.window-content .status-bar-field {
   box-shadow: var(--border-status-field);
   flex-grow: 1;
   padding: 2px 3px;
@@ -132,3 +132,126 @@
 
 .window-content summary { list-style: none; }
 .window-content summary::-webkit-details-marker { display: none; }
+
+@font-face {
+  font-family: "Pixelated MS Sans Serif";
+  src: url("98-css-fonts/ms_sans_serif.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Pixelated MS Sans Serif";
+  src: url("98-css-fonts/ms_sans_serif_bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root { --system-font: "Pixelated MS Sans Serif", Tahoma, sans-serif; }
+
+:is(.window-title, .taskbar, .start-button, .taskbar-item, .start-menu, .start-menu-item,
+    .mail-menubar, .mail-menu-panel button, .mail-toolbar button, .mail-pane-heading,
+    .mail-folders button, .mail-table th, .app-toolbar, .application-actions button,
+    .pane-label, .preview-reference, .reconciliation-tabs button, .status-bar,
+    .appearance-tab, .appearance-panel legend, .appearance-panel button, #display-theme) {
+  font-family: var(--system-font);
+}
+
+.display-settings {
+  padding: 8px;
+  display: block;
+  background: var(--button-face);
+}
+
+.display-settings .appearance-tab {
+  position: relative;
+  display: table;
+  margin: 0 0 -1px 3px;
+  padding: 4px 10px 5px;
+  background: var(--button-face);
+  box-shadow: var(--border-tab);
+  font-size: 11px;
+}
+
+.appearance-panel {
+  display: grid;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--button-shadow);
+  box-shadow: inset 1px 1px var(--button-highlight);
+}
+
+.appearance-panel fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 6px 8px 8px;
+  border: 1px groove var(--button-highlight);
+}
+
+.appearance-panel legend { padding-inline: 4px; }
+.appearance-panel select { min-height: 24px; }
+.appearance-panel small { color: var(--ledger-secondary); }
+
+.window-content :is(.records-status, .feedback).status-bar {
+  padding: 2px 18px 2px 2px;
+}
+
+#record-drag-hint { flex-grow: 0; }
+
+.folder-tree > button:not(:first-of-type) {
+  position: relative;
+  padding-inline-start: 13px;
+}
+
+.folder-tree > button:not(:first-of-type)::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 5px;
+  border-inline-start: 1px dotted currentColor;
+}
+
+.folder-tree > button:not(:first-of-type)::after {
+  content: "";
+  position: absolute;
+  inset: 13px auto auto 5px;
+  width: 6px;
+  border-block-start: 1px dotted currentColor;
+}
+
+.folder-tree > button:last-of-type:not(:first-of-type)::before { bottom: auto; height: 14px; }
+
+:is(.files-pane, .preview-scroll, .mail-table-scroll) {
+  border: 1px solid var(--button-shadow);
+  border-bottom-color: var(--button-highlight);
+  border-right-color: var(--button-highlight);
+}
+
+.window-content :is(.mail-table-scroll, .mail-thread-content, .files-pane, .preview-scroll, .report-scroll)::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+.window-content :is(.mail-table-scroll, .mail-thread-content, .files-pane, .preview-scroll, .report-scroll)::-webkit-scrollbar-track {
+  background: repeating-conic-gradient(var(--button-face) 0% 25%, var(--button-highlight) 0% 50%) 0 0 / 2px 2px;
+}
+
+.window-content :is(.mail-table-scroll, .mail-thread-content, .files-pane, .preview-scroll, .report-scroll)::-webkit-scrollbar-thumb {
+  background: var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+}
+
+.window-content :is(.mail-table-scroll, .mail-thread-content, .files-pane, .preview-scroll, .report-scroll)::-webkit-scrollbar-button {
+  display: none;
+}
+
+.window-content :is(.mail-table-scroll, .mail-thread-content, .files-pane, .preview-scroll, .report-scroll)::-webkit-scrollbar-button:single-button {
+  display: block;
+  width: 16px;
+  height: 16px;
+  background: var(--surface) center / 100% 100% no-repeat;
+}
+
+.window-content :is(.mail-table-scroll, .mail-thread-content, .files-pane, .preview-scroll, .report-scroll)::-webkit-scrollbar-button:single-button:vertical:decrement { background-image: url("98-css-icons/button-up.svg"); }
+.window-content :is(.mail-table-scroll, .mail-thread-content, .files-pane, .preview-scroll, .report-scroll)::-webkit-scrollbar-button:single-button:vertical:increment { background-image: url("98-css-icons/button-down.svg"); }
+.window-content :is(.mail-table-scroll, .mail-thread-content, .files-pane, .preview-scroll, .report-scroll)::-webkit-scrollbar-button:single-button:horizontal:decrement { background-image: url("98-css-icons/button-left.svg"); }
+.window-content :is(.mail-table-scroll, .mail-thread-content, .files-pane, .preview-scroll, .report-scroll)::-webkit-scrollbar-button:single-button:horizontal:increment { background-image: url("98-css-icons/button-right.svg"); }
