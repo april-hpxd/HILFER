@@ -147,14 +147,10 @@
   font-display: swap;
 }
 
-:root { --system-font: "Pixelated MS Sans Serif", Tahoma, sans-serif; }
-
-:is(.window-title, .taskbar, .start-button, .taskbar-item, .start-menu, .start-menu-item,
-    .mail-menubar, .mail-menu-panel button, .mail-toolbar button, .mail-pane-heading,
-    .mail-folders button, .mail-table th, .app-toolbar, .application-actions button,
-    .pane-label, .preview-reference, .reconciliation-tabs button, .status-bar,
-    .appearance-tab, .appearance-panel legend, .appearance-panel button, #display-theme) {
-  font-family: var(--system-font);
+:is(.window-title, .icon-text, .taskbar, .start-button, .taskbar-item, .start-menu,
+    .start-menu-item, .mail-table th, .app-toolbar, .pane-label, .status-bar,
+    .appearance-tab, .appearance-panel legend) {
+  font-family: var(--font-ui);
 }
 
 .display-settings {

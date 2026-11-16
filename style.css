@@ -170,7 +170,7 @@
 }
 
 body {
-    font-family: 'MS Sans Serif', sans-serif;
+    font-family: var(--font-reading);
     font-size: 11px;
     overflow: hidden;
     height: 100vh;
@@ -331,7 +331,7 @@ body {
     font-weight: bold;
     text-decoration: none;
     color: var(--text-color);
-    font-family: 'MS Sans Serif', sans-serif;
+    font-family: var(--font-ui);
 }
 
 .window-button:hover {
@@ -439,7 +439,7 @@ body {
     padding: 2px 8px;
     border: 1px inset var(--button-bg);
     margin: 2px;
-    font-family: 'MS Sans Serif', sans-serif;
+    font-family: var(--font-ui);
     font-size: 11px;
     height: 22px;
     display: flex;
@@ -517,7 +517,7 @@ body {
     padding: 4px 16px;
     cursor: pointer;
     font-size: 11px;
-    font-family: 'MS Sans Serif', sans-serif;
+    font-family: var(--font-ui);
     margin: 4px;
     color: var(--text-color);
 }
@@ -559,7 +559,7 @@ body {
 input[type="text"], input[type="email"], textarea {
     border: 1px inset var(--window-bg);
     padding: 2px 4px;
-    font-family: 'MS Sans Serif', sans-serif;
+    font-family: var(--font-ui);
     font-size: 11px;
     background: var(--white);
     color: var(--text-color);
@@ -571,7 +571,7 @@ button, input[type="button"], input[type="submit"] {
     padding: 4px 12px;
     cursor: pointer;
     font-size: 11px;
-    font-family: 'MS Sans Serif', sans-serif;
+    font-family: var(--font-ui);
     color: var(--text-color);
 }
 

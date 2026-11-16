@@ -131,21 +131,21 @@ input, select { caret-color: var(--control-focus); }
 .feedback[data-tone="success"] { color: var(--ledger-ink); }
 .pane-label { font-weight: normal; letter-spacing: 0; }
 .report-letterhead { border-top: 0; border-bottom: 1px solid var(--ledger-rule); }
-.report-letterhead b { font: bold 16px Georgia, serif; letter-spacing: 0; }
-.incident-report h1 { font: bold 17px Georgia, serif; margin: 14px 0 10px; }
+.report-letterhead b { font: bold 16px var(--font-reading); letter-spacing: 0; }
+.incident-report h1 { font: bold 17px var(--font-reading); margin: 14px 0 10px; }
 .report-control { font-size: 10px; }
 .report-control b { letter-spacing: 0; }
 .report-control > span { display: none; }
 .report-progress { padding: 7px 0; }
-.report-stamp, .report-filed .report-stamp { border: 0; padding: 0; color: var(--ledger-secondary); font: 10px Tahoma, sans-serif; }
+.report-stamp, .report-filed .report-stamp { border: 0; padding: 0; color: var(--ledger-secondary); font: 10px var(--font-reading); }
 .report-filed .report-stamp { font-weight: bold; color: var(--filed-ink); }
-.report-subject { font: 11px Tahoma, sans-serif; }
-.report-findings strong { font: bold 12px Tahoma, sans-serif; }
+.report-subject { font: 11px var(--font-reading); }
+.report-findings strong { font: bold 12px var(--font-reading); }
 .document-heading { border-top: 0; border-bottom: 1px solid var(--ledger-rule); padding-right: 45px; }
 .document-identity strong { font-size: 15px; }
 .document-fields { border-top: 0; padding-top: 0; }
 .document-authorization { line-height: 1.5; }
-.session-status { left: 16px; bottom: 42px; gap: 3px; font: 10px Tahoma, sans-serif; }
+.session-status { left: 16px; bottom: 42px; gap: 3px; font: 10px var(--font-ui); }
 .session-status:has(> :empty) { display: none; }
 .preview-empty-sheet { display: none; }
 @media (max-width: 450px) { .report-control { flex-wrap: wrap; } }
