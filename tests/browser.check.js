@@ -152,6 +152,19 @@ try {
   assert.ok(released.x < 0, 'window can move past the viewport edge');
   await page.mouse.move(100, 100);
   assert.deepEqual(await page.locator('#records-window').boundingBox(), released);
+  await recordsWindow.getByRole('button', {name:'Maximize Records', exact:true}).click();
+  await page.mouse.click(720, 10);
+  assert.equal((await recordsWindow.boundingBox()).width, 1440, 'clicking the title bar keeps the window maximized');
+  await page.mouse.move(720, 10);
+  await page.mouse.down();
+  await page.mouse.move(740, 110, {steps:10});
+  const dragged = await recordsWindow.boundingBox();
+  assert.equal(dragged.width, resized.width);
+  assert.equal(dragged.height, resized.height);
+  assert.equal(dragged.y, 100);
+  assert.ok(Math.abs(dragged.x + dragged.width / 2 - 740) <= 1, 'the restored title bar stays under the pointer');
+  await page.mouse.up();
+  assert.deepEqual(await recordsWindow.boundingBox(), dragged);
   for (const asset of ['logo', 'wallpaper', 'records', 'reconciliation', 'settings']) {
     assert.equal((await page.request.get(new URL('/assets/arwa/' + asset + '.webp', target).href)).status(), 200);
   }

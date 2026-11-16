@@ -180,6 +180,7 @@ function initDragAndDrop() {
     const snapDistance = 12;
     const atTopEdge = event => event.clientY - offset.y <= snapDistance;
     let dragOrigin;
+    let snapArmed;
     let pointerId = null;
     let dragHandle;
 
@@ -196,12 +197,17 @@ function initDragAndDrop() {
 
     document.addEventListener('pointerdown', function(e) {
         const header = e.target.closest('.window-header');
-        if (pointerId === null && e.pointerType === 'mouse' && e.button === 0 && header && !header.parentElement.classList.contains('maximized') && !e.target.closest('.window-controls')) {
+        if (pointerId === null && e.pointerType === 'mouse' && e.button === 0 && header && !e.target.closest('.window-controls')) {
             header.setPointerCapture(e.pointerId);
             pointerId = e.pointerId;
             dragHandle = header;
             draggedElement = header.parentElement;
-            dragOrigin = {left: draggedElement.style.left, top: draggedElement.style.top};
+            const maximized = draggedElement.classList.contains('maximized');
+            dragOrigin = {
+                left: draggedElement.style.left, top: draggedElement.style.top,
+                x: e.clientX, y: e.clientY, maximized
+            };
+            snapArmed = !maximized;
             const rect = draggedElement.getBoundingClientRect();
             offset.x = e.clientX - rect.left;
             offset.y = e.clientY - rect.top;
@@ -217,14 +223,23 @@ function initDragAndDrop() {
         if (draggedElement && e.pointerId === pointerId) {
             // Mouse release outside the browser must not leave a window stuck to the cursor.
             if (!(e.buttons & 1)) { finishDrag(); return; }
+            if (draggedElement.classList.contains('maximized')) {
+                if (Math.hypot(e.clientX - dragOrigin.x, e.clientY - dragOrigin.y) < 5) return;
+                const horizontalAnchor = offset.x / draggedElement.getBoundingClientRect().width;
+                maximizeWindow(draggedElement.id.slice(0, -'-window'.length));
+                dragOrigin.left = draggedElement.style.left;
+                dragOrigin.top = draggedElement.style.top;
+                offset.x = horizontalAnchor * draggedElement.getBoundingClientRect().width;
+            }
             const x = e.clientX - offset.x;
             const y = e.clientY - offset.y;
             // Like desktop windows, edges may extend beyond the visible workspace.
             draggedElement.style.left = x + 'px';
             draggedElement.style.top = Math.max(0, y) + 'px';
             if (!atTopEdge(e)) {
+                snapArmed = true;
                 preview.hidden = true;
-            } else if (preview.hidden) {
+            } else if (snapArmed && preview.hidden) {
                 const rect = draggedElement.getBoundingClientRect();
                 preview.style.setProperty('--snap-x', rect.left - 2 + 'px');
                 preview.style.setProperty('--snap-y', rect.top - 2 + 'px');
@@ -238,7 +253,8 @@ function initDragAndDrop() {
     document.addEventListener('pointerup', function(e) {
         if (e.button !== 0 || e.pointerId !== pointerId) return;
         if (draggedElement && !preview.hidden && atTopEdge(e)) {
-            Object.assign(draggedElement.style, dragOrigin);
+            draggedElement.style.left = dragOrigin.left;
+            draggedElement.style.top = dragOrigin.top;
             maximizeWindow(draggedElement.id.slice(0, -'-window'.length));
         }
         finishDrag();
@@ -252,7 +268,11 @@ function initDragAndDrop() {
         if (e.key !== 'Escape' || !draggedElement) return;
         e.preventDefault();
         e.stopPropagation();
-        Object.assign(draggedElement.style, dragOrigin);
+        draggedElement.style.left = dragOrigin.left;
+        draggedElement.style.top = dragOrigin.top;
+        if (dragOrigin.maximized && !draggedElement.classList.contains('maximized')) {
+            maximizeWindow(draggedElement.id.slice(0, -'-window'.length));
+        }
         finishDrag();
     }, true);
     window.addEventListener('blur', finishDrag);
