@@ -126,6 +126,7 @@ try {
   await page.mouse.down();
   await page.mouse.move(header.x + 180, 4, {steps:8});
   assert.ok(await snapPreview.isVisible());
+  assert.equal((await recordsWindow.boundingBox()).y, 0);
   assert.equal((await recordsWindow.boundingBox()).width, resized.width);
   await page.mouse.move(header.x + 180, header.y + 10);
   assert.ok(await snapPreview.isHidden());

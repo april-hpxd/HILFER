@@ -141,6 +141,20 @@ select { font: 11px var(--font-ui); min-width: 0; width: 100%; padding: 2px; bac
   border: 2px solid var(--routing-blue);
   background: color-mix(in srgb, var(--routing-blue) 15%, transparent);
   box-shadow: inset 0 0 0 1px var(--window-border-light);
+  transform-origin: top left;
+}
+.window-snap-preview:not([hidden]) {
+  animation: snap-preview-expand 170ms cubic-bezier(.2, .8, .2, 1) both;
+}
+@keyframes snap-preview-expand {
+  from {
+    opacity: 0;
+    transform: translate(var(--snap-x), var(--snap-y)) scale(var(--snap-scale-x), var(--snap-scale-y));
+  }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .window-snap-preview:not([hidden]) { animation: none; }
 }
 .taskbar-item { font-size: 11px; }
 .start-menu { z-index: 100001; bottom: 32px; }

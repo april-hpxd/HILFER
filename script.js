@@ -209,8 +209,17 @@ function initDragAndDrop() {
             const y = e.clientY - offset.y;
             // Like desktop windows, edges may extend beyond the visible workspace.
             draggedElement.style.left = x + 'px';
-            draggedElement.style.top = y + 'px';
-            preview.hidden = !atTopEdge(e);
+            draggedElement.style.top = Math.max(0, y) + 'px';
+            if (!atTopEdge(e)) {
+                preview.hidden = true;
+            } else if (preview.hidden) {
+                const rect = draggedElement.getBoundingClientRect();
+                preview.style.setProperty('--snap-x', rect.left - 2 + 'px');
+                preview.style.setProperty('--snap-y', rect.top - 2 + 'px');
+                preview.style.setProperty('--snap-scale-x', rect.width / (window.innerWidth - 4));
+                preview.style.setProperty('--snap-scale-y', rect.height / (window.innerHeight - 36));
+                preview.hidden = false;
+            }
         }
     });
 
