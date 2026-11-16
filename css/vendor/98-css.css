@@ -1,0 +1,134 @@
+/* Adapted from 98.css 0.1.21 (MIT). See 98-css.LICENSE and CREDITS.md. */
+
+:root {
+  --surface: var(--button-bg);
+  --button-face: var(--cabinet-inset);
+  --button-highlight: var(--window-border-light);
+  --button-shadow: var(--control-edge);
+  --window-frame: var(--ledger-secondary);
+  --border-raised-outer: inset -1px -1px var(--window-frame),
+    inset 1px 1px var(--button-highlight);
+  --border-raised-inner: inset -2px -2px var(--button-shadow),
+    inset 2px 2px var(--button-face);
+  --border-sunken-outer: inset -1px -1px var(--button-highlight),
+    inset 1px 1px var(--window-frame);
+  --border-sunken-inner: inset -2px -2px var(--button-face),
+    inset 2px 2px var(--button-shadow);
+  --border-window-outer: inset -1px -1px var(--window-frame),
+    inset 1px 1px var(--button-face);
+  --border-window-inner: inset -2px -2px var(--button-shadow),
+    inset 2px 2px var(--button-highlight);
+  --border-tab: inset -1px 0 var(--window-frame),
+    inset 1px 1px var(--button-face),
+    inset -2px 0 var(--button-shadow),
+    inset 2px 2px var(--button-highlight);
+  --border-field: inset -1px -1px var(--button-highlight),
+    inset 1px 1px var(--button-shadow), inset -2px -2px var(--button-face),
+    inset 2px 2px var(--window-frame);
+  --border-status-field: inset -1px -1px var(--button-face), inset 1px 1px var(--button-shadow);
+}
+
+:is(
+  button:where(.window-content button):not(:where(
+    .source-reference, .report-case-link, .claim-source, .record-file,
+    .case-list button, .folder-tree button, .mail-folders button, .mail-menubar button, [role="tab"]
+  )),
+  :is(.window-button, .start-button, .taskbar-item, .assistant-notification)
+) {
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  border-color: transparent;
+  border-style: solid;
+}
+
+:is(
+  button:where(.window-content button):not(:where(
+    .source-reference, .report-case-link, .claim-source, .record-file,
+    .case-list button, .folder-tree button, .mail-folders button, .mail-menubar button, [role="tab"]
+  )),
+  :is(.window-button, .start-button, .taskbar-item, .assistant-notification)
+):not(:disabled):active,
+:is(.start-button, .taskbar-item).active {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+  border-color: transparent;
+  border-style: solid;
+}
+
+.window, .start-menu {
+  box-shadow: var(--border-window-outer), var(--border-window-inner);
+  border-color: var(--button-face) var(--window-frame) var(--window-frame) var(--button-face);
+  border-style: solid;
+}
+
+.window-button::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  background: currentColor;
+  mask: var(--window-control-glyph) center / auto no-repeat;
+}
+
+.window-button[data-control="minimize"] { --window-control-glyph: url("98-css-icons/minimize.svg"); }
+.window-button[data-control="maximize"] { --window-control-glyph: url("98-css-icons/maximize.svg"); }
+.maximized .window-button[data-control="maximize"] { --window-control-glyph: url("98-css-icons/restore.svg"); }
+.window-button[data-control="close"] { --window-control-glyph: url("98-css-icons/close.svg"); }
+
+.reconciliation-tabs button {
+  box-shadow: var(--border-tab);
+  border-color: transparent;
+  border-style: solid;
+}
+
+:is(.clock, .folder-tree, .case-list, .mail-folders) {
+  box-shadow: var(--border-status-field);
+}
+
+#emails-app :is(.mail-toolbar, .mail-search) button:focus-visible,
+#emails-app .mail-search input[type="search"]:focus-visible {
+  outline: 1px dotted var(--control-focus);
+  outline-offset: -4px;
+}
+
+.window-content :is(input[type="search"], input[type="text"], textarea, select) {
+  border-color: transparent;
+  border-style: solid;
+  box-shadow: var(--border-field);
+  background-color: var(--paper);
+  box-sizing: border-box;
+  border-radius: 0;
+}
+
+.window-content select:disabled { background-color: var(--cabinet-inset); }
+
+#emails-app .mail-folders {
+  display: block;
+  background: var(--paper);
+  box-shadow: var(--border-field);
+  padding: 2px;
+  margin: 0;
+}
+
+#emails-app .mail-table > thead > tr > * {
+  position: sticky;
+  top: 0;
+  height: 17px;
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  background: var(--surface);
+  box-sizing: border-box;
+  font-weight: normal;
+}
+
+#emails-app .status-bar {
+  margin: 0px 1px;
+  display: flex;
+  gap: 1px;
+}
+
+#emails-app .status-bar-field {
+  box-shadow: var(--border-status-field);
+  flex-grow: 1;
+  padding: 2px 3px;
+  margin: 0;
+}
+
+.window-content summary { list-style: none; }
+.window-content summary::-webkit-details-marker { display: none; }
