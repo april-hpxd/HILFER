@@ -29,7 +29,7 @@
 }
 
 :is(
-  button:where(.window-content button):not(:where(
+  button:where(.window-content button, .assistant-balloon button):not(:where(
     .source-reference, .report-case-link, .claim-source, .record-file,
     .case-list button, .folder-tree button, .mail-folders button, .mail-menubar button, [role="tab"]
   )),
@@ -41,7 +41,7 @@
 }
 
 :is(
-  button:where(.window-content button):not(:where(
+  button:where(.window-content button, .assistant-balloon button):not(:where(
     .source-reference, .report-case-link, .claim-source, .record-file,
     .case-list button, .folder-tree button, .mail-folders button, .mail-menubar button, [role="tab"]
   )),

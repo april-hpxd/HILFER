@@ -14,6 +14,12 @@ let selectedIcon = null;
 
 
 function openWindow(windowId) {
+    if (windowId === 'ai') {
+        closeStartMenu();
+        clearIconSelection();
+        window.dispatchEvent(new Event('hilfer:assistant-open'));
+        return;
+    }
     const windowEl = document.getElementById(windowId + '-window');
     if (!windowEl) return;
 

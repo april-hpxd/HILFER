@@ -30,13 +30,21 @@ export function createAssistantReceipt(storage, notificationId) {
 
 export function mountAI(root, store, content, { storage } = {}) {
   const receipt = createAssistantReceipt(storage, content.caseId + ':reconciled');
-  const notification = document.querySelector('#assistant-notification');
-  const announcement = document.querySelector('#assistant-announcement');
-  const windowEl = root.closest('.window');
-  root.innerHTML = `<header class="ai-profile"><img class="ai-avatar" alt="HILFER Assistant portrait"><div><h1>HILFER Assistant</h1><p>Internal support</p></div></header>
+  root.innerHTML = `<section id="assistant-balloon" class="assistant-balloon" aria-labelledby="assistant-title" hidden>
+    <header class="ai-profile"><h1 id="assistant-title">HILFER Assistant</h1><button type="button" data-assistant-dismiss aria-label="Dismiss Assistant">Close</button></header>
     <div class="ai-transcript" tabindex="-1" role="log" aria-label="Assistant correspondence" aria-live="polite" aria-relevant="additions"></div>
     <div class="ai-actions"><button data-open="reconciliation">Open Reconciliation</button><button data-open="records">Open Records</button></div>
-    <p class="ai-status" role="status"></p>`;
+    </section>
+    <div class="assistant-launch">
+      <button type="button" id="assistant-notification" class="assistant-notification" aria-controls="assistant-balloon" hidden>Report updated</button>
+      <button type="button" id="assistant-portrait" aria-label="HILFER Assistant" aria-controls="assistant-balloon" aria-expanded="false"><img class="ai-avatar" alt=""></button>
+    </div>
+    <span class="assistant-announcement" id="assistant-announcement" role="status" aria-live="polite"></span>`;
+  const notification = root.querySelector('#assistant-notification');
+  const announcement = root.querySelector('#assistant-announcement');
+  const launcher = root.querySelector('#assistant-portrait');
+  const balloon = root.querySelector('#assistant-balloon');
+  const log = root.querySelector('.ai-transcript');
   const portrait = root.querySelector('.ai-avatar');
   let previousPhase;
   let wasUnread = false;
@@ -47,29 +55,41 @@ export function mountAI(root, store, content, { storage } = {}) {
     const portraitSrc = `assets/arwa/portraits/${face}.webp`;
     if (portrait.getAttribute('src') !== portraitSrc) portrait.src = portraitSrc;
     if (model.phase !== previousPhase) {
-      const log = root.querySelector('.ai-transcript');
       log.innerHTML = model.messages.map(message => `<section class="ai-message"><h2>${h(message.label)}</h2><p>${h(message.text)}</p></section>`).join('');
       log.scrollTop = log.scrollHeight;
-      root.querySelector('.ai-status').textContent = model.phase === 'filed' ? 'Report revision registered.' : 'Personnel review / pending';
       previousPhase = model.phase;
     }
-    if (model.notificationId && windowEl.classList.contains('active') && windowEl.classList.contains('visible')) receipt.markRead();
+    if (model.notificationId && !balloon.hidden) receipt.markRead();
     const unread = Boolean(model.notificationId) && !receipt.isRead();
     notification.hidden = !unread;
     if (unread !== wasUnread) announcement.textContent = unread ? 'HILFER Assistant has a report update.' : '';
     wasUnread = unread;
   }
-  window.addEventListener('hilfer:window-activated', ({ detail }) => {
-    if (detail.windowId === 'ai') {
-      const focusCorrespondence = !windowEl.contains(document.activeElement);
-      update();
-      if (focusCorrespondence) root.querySelector('.ai-transcript').focus({ preventScroll: true });
+  function setOpen(open, focus = true) {
+    balloon.hidden = !open;
+    launcher.setAttribute('aria-expanded', String(open));
+    update();
+    if (open) log.scrollTop = log.scrollHeight;
+    if (focus) (open ? log : launcher).focus({preventScroll: true});
+  }
+  launcher.addEventListener('click', () => setOpen(balloon.hidden));
+  notification.addEventListener('click', () => setOpen(true));
+  root.querySelector('[data-assistant-dismiss]').addEventListener('click', () => setOpen(false));
+  root.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !balloon.hidden) {
+      event.stopPropagation();
+      setOpen(false);
     }
   });
+  root.querySelector('.ai-actions').addEventListener('click', event => {
+    if (event.target.closest('[data-open]')) setOpen(false);
+  });
+  window.addEventListener('hilfer:assistant-open', () => setOpen(true));
   store.subscribe(update);
   store.onEvent(({ type }) => {
-    if (type === 'hilfer:progress-reset') { receipt.reset(); update(); }
+    if (type === 'hilfer:progress-reset') { receipt.reset(); setOpen(false, false); }
     if (type === 'hilfer:case-reconciled') update();
   });
   update();
+  root.hidden = false;
 }
