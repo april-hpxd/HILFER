@@ -15,6 +15,8 @@
 .ai-message p { font: 12px/1.5 Tahoma, sans-serif; }
 .ai-actions { display: flex; flex-wrap: wrap; gap: 6px; padding: 7px; border-top: 1px solid var(--control-edge); background: var(--cabinet-inset); flex: none; }
 .ai-actions button { font: 11px Tahoma, sans-serif; padding: 4px 7px; }
+.ai-voice-controls { display: flex; gap: 6px; padding: 7px; border-top: 1px solid var(--control-edge); background: var(--cabinet-inset); flex: none; }
+.ai-voice-controls button { font: 11px Tahoma, sans-serif; padding: 4px 7px; }
 .ai-status { padding: 5px 8px; font: 10px Tahoma, sans-serif; flex: none; }
 #ai-window .window-title::before, .taskbar-item[data-window="ai"]::before, .start-menu-item[data-open="ai"]::before { background-image: var(--art-ai); }
 .assistant-notification { margin-left: 5px; font: 10px Tahoma, sans-serif; padding: 3px 6px; white-space: nowrap; flex: none; }
@@ -27,4 +29,4 @@
   .assistant-notification { margin-left: 2px; padding: 3px; font-size: 9px; }
   .taskbar-item { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
-@media (pointer: coarse) { .ai-actions button { min-height: 28px; } }
+@media (pointer: coarse) { .ai-actions button, .ai-voice-controls button { min-height: 28px; } }
