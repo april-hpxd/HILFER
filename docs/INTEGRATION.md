@@ -141,3 +141,9 @@ Each reader is a `.window` under `#desktop` registered through existing `openWin
 Mail now uses `listThreads()` for its table and opens one OS window per thread. The table shows participants and the latest message preview. Search keeps that preview and expands the newest matching message in the reader. Sent projects authorized threads with at least one message from the mailbox address and uses the latest outgoing message for its row and initial expansion. Opening a conversation marks the entire thread read through `openThread(id)`. Row selection and expansion do not write receipts. The previous message-level APIs remain available for integrations.
 
 Mail's Delete and Restore controls use `setThreadDeleted(id, value)`. Deleted Items is a reversible view stored as optional `deletedThreadIds` in the existing Mail receipt key. Searches from Deleted Items stay in that folder. Other searches exclude deleted threads. Restoring returns a thread to its authored folder and any applicable Sent view. Reset clears the local deletion state.
+
+### Demo voice and Footage
+
+Listen in the Assistant balloon reads the current correspondence with browser speech synthesis. Its separate `hilfer:assistant-dialogue:v1` checkpoint tracks completed lines by case and resets with demo progress. Closing the balloon or changing the active dialogue stops playback. The Assistant portrait and wallpaper both use the existing persisted distortion level, so entering Mail does not change either.
+
+Footage exposes the supplied CAM 4 clip as a read-only demo preview. It uses native video controls and pauses when its window is closed or minimized. The MP4 retains the source clip audio. No case or gameplay state depends on playback.

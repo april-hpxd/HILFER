@@ -76,6 +76,7 @@ try {
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 1);
   assert.ok(await page.evaluate(() => hilfer.getState().unlockedCaseIds.includes('CASE-002')));
   assert.equal(await page.locator('html').getAttribute('data-distortion'), '1');
+  assert.match(await page.locator('#desktop').evaluate(el => getComputedStyle(el).backgroundImage), /wallpaper-distorted\.webp/);
   assert.ok(await page.evaluate(() => window.sawGlitch));
   await page.waitForFunction(() => !document.documentElement.classList.contains('microglitch'));
   await page.evaluate(() => hilfer.reconcileClaim('CASE-001', 'OH-008', 'workEligibility'));
@@ -100,6 +101,7 @@ try {
   await page.locator('#reset-progress').click();
   assert.equal(await page.evaluate(() => hilfer.getState().completedCaseIds.length), 0);
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 0);
+  assert.match(await page.locator('#desktop').evaluate(el => getComputedStyle(el).backgroundImage), /\/wallpaper\.webp/);
   await page.locator('[data-open="reconciliation"]').first().click();
   for (const text of ['Available for duty', 'Unverified']) assert.ok((await report.textContent()).includes(text));
 
@@ -170,6 +172,14 @@ try {
   assert.ok(Math.abs(dragged.x + dragged.width / 2 - 740) <= 1, 'the restored title bar stays under the pointer');
   await page.mouse.up();
   assert.deepEqual(await recordsWindow.boundingBox(), dragged);
+  await page.locator('.desktop-icons [data-open="footage"]').click();
+  const video = page.locator('#footage-window video');
+  assert.ok(await video.isVisible());
+  assert.ok(await video.evaluate(el => el.paused));
+  await video.evaluate(async el => { el.muted = true; await el.play(); });
+  assert.ok(await video.evaluate(el => el.videoWidth > 0 && el.duration > 5));
+  await page.getByRole('button', {name:'Minimize Footage', exact:true}).click();
+  assert.ok(await video.evaluate(el => el.paused));
   for (const asset of ['logo', 'wallpaper', 'records', 'reconciliation', 'settings']) {
     assert.equal((await page.request.get(new URL('/assets/arwa/' + asset + '.webp', target).href)).status(), 200);
   }

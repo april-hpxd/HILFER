@@ -71,3 +71,7 @@ Arwa's `saturated/emails.png` and `not saturated/emails.png` from Altynai's HILF
 Arwa's [reports artwork](https://drive.google.com/drive/folders/1F9tMjahrXhWlMYdcHzfMyXePVffz8pMq) supplies the Jessica personnel portrait and the cropped Jessica and Tito Mail avatars. Arwa's [Assistant artwork](https://drive.google.com/drive/folders/1FBGN0m3nxI7llDjfAU1jFvBRbDZmap_n) supplies the normal portrait (`1.png`) and first distortion (`3.png`). Only resized WebP derivatives are stored in `portraits/`.
 
 In the [normal pixel icon set](https://drive.google.com/drive/folders/1RWOiS3pH9OB7dtDT1f_3QP3WYxQZ1U_d), `21.png` now supplies Reconciliation and `18.png` supplies Display Properties. The Graphite icons use desaturated derivatives of these same shapes. Standard and Graphite share the existing shortcut, title, Start and taskbar mappings.
+
+## Team demo integration
+
+Lyden King's optional narration is adapted from [b91534d](https://github.com/april-hpxd/HILFER/commit/b91534d). Altynai's [integration](https://github.com/april-hpxd/HILFER/commit/d3c92b7) supplies Arwa's distorted wallpaper (`assets/arwa/wallpapers/3.png`) and the Standard and Graphite Footage shortcut artwork. The CAM 4 preview is a 960 × 540 MP4 derivative of the team's `first hald draft.mov` with its source audio. The original MOV and separate static WAV are not included.

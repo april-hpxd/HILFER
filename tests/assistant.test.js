@@ -3,6 +3,31 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { deriveAssistant, createAssistantReceipt, ASSISTANT_RECEIPT_KEY } from '../js/apps/ai.js';
 import { createStore } from '../js/core/store.js';
+import { createAssistantVoice } from '../js/apps/assistant-voice.js';
+
+test('optional narration resumes at the next line and ignores canceled completions', () => {
+  const saved = new Map();
+  const storage = {getItem:key => saved.get(key), setItem:(key,value) => saved.set(key,value), removeItem:key => saved.delete(key)};
+  let utterance;
+  const engine = {
+    speech: { speak(value) { utterance = value; }, cancel() { utterance?.onend(); } },
+    Utterance: class { constructor(text) { this.text = text; } }
+  };
+  const lines = [{id:'welcome', text:'Welcome'}, {id:'filed', text:'Filed'}];
+  const voice = createAssistantVoice(storage, 'CASE-001', engine);
+  assert.equal(utterance, undefined);
+  voice.play(lines, () => {});
+  assert.equal(utterance.text, 'Welcome');
+  utterance.onend();
+  assert.equal(utterance.text, 'Filed');
+  voice.stop();
+  const reloaded = createAssistantVoice(storage, 'CASE-001', engine);
+  reloaded.play(lines, () => {});
+  assert.equal(utterance.text, 'Filed');
+  reloaded.reset();
+  reloaded.play(lines, () => {});
+  assert.equal(utterance.text, 'Welcome');
+});
 const read = name => JSON.parse(readFileSync(new URL('../data/' + name + '.json', import.meta.url), 'utf8'));
 const records = read('records'), cases = read('cases'), content = read('assistant');
 const memory = () => {

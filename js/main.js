@@ -35,6 +35,19 @@ async function boot() {
   reconciliation = mountReconciliation(document.querySelector('#reconciliation-app'), store, { openRecord });
   mountAI(document.querySelector('#ai-app'), store, assistant, { storage });
   mountMail(document.querySelector('#emails-app'), emails, {storage,store,openRecord});
+  const footage = document.querySelector('#footage-window');
+  const video = footage.querySelector('video');
+  const stopFootage = () => video.pause();
+  new MutationObserver(() => {
+    if (!footage.classList.contains('visible')) stopFootage();
+  }).observe(footage, {attributes:true, attributeFilter:['class']});
+  window.addEventListener('pagehide', stopFootage);
+  store.onEvent(({type}) => {
+    if (type === 'hilfer:progress-reset') { stopFootage(); video.currentTime = 0; }
+  });
+  video.querySelector('source').addEventListener('error', () => {
+    footage.querySelector('.status-bar-field').textContent = 'Preview could not be loaded.';
+  });
   mountDistortion(store);
   function update() {
     document.querySelector('#save-status').textContent = store.getWarning();

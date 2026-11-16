@@ -133,6 +133,12 @@ select { font: 11px var(--font-ui); min-width: 0; width: 100%; padding: 2px; bac
 .session-status { position: absolute; bottom: 50px; left: 25px; display: grid; gap: 6px; color: #c3d1bf; font: 10px var(--font-document); max-width: calc(100vw - 50px); pointer-events: none; }
 #save-status { color: #ffe4b8; }
 .taskbar { z-index: 100000; height: 32px; }
+.footage-content { display:flex; flex-direction:column; overflow:hidden; }
+.footage-content video { display:block; width:100%; min-height:0; flex:1; background:#171313; object-fit:contain; }
+.footage-status { padding:2px 18px 2px 2px; }
+#footage-window .window-title::before,
+.start-menu-item[data-open="footage"]::before,
+.taskbar-item[data-window="footage"]::before { background-image:var(--art-footage); }
 .window-snap-preview {
   position: fixed;
   inset: 2px 2px 34px;
