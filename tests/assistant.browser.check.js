@@ -38,11 +38,11 @@ const fileJessica = async page => {
 try {
   const page = await browser.newPage({viewport:{width:1440,height:1000}}); listen(page);
   await page.addInitScript(() => {
-    window.spokenLines = [];
-    Object.defineProperty(window, 'speechSynthesis', {value:{
-      speak(line) { window.spokenLines.push(line.text); },
-      cancel() {}
-    }});
+    const play = HTMLMediaElement.prototype.play;
+    HTMLMediaElement.prototype.play = function () {
+      if (this.src.includes('/assets/sounds/assistant/')) window.assistantAudio = this;
+      return play.call(this);
+    };
   });
   await page.goto(target); await ready(page);
   for (const path of ['assets/sounds/glitch.mp3', 'assets/arwa/icons/assistant-pixel.webp']) {
@@ -53,13 +53,12 @@ try {
   const launcher = page.locator('#assistant-portrait');
   assert.ok(await launcher.isVisible());
   assert.ok(await balloon.isHidden(), 'the Assistant does not greet automatically');
-  assert.deepEqual(await page.evaluate(() => spokenLines), []);
+  assert.equal(await page.evaluate(() => window.assistantAudio), undefined);
   await launcher.click();
   assert.ok(await balloon.isVisible());
-  await page.waitForFunction(() => spokenLines.some(text => text.includes('Welcome to HILFER')));
-  const mute = page.locator('[data-assistant-voice]');
-  await mute.click();
-  assert.equal(await mute.getAttribute('aria-pressed'), 'true');
+  await page.waitForFunction(() => window.assistantAudio?.currentTime > 0);
+  assert.match(await page.evaluate(() => assistantAudio.src), /welcome\.mp3$/);
+  assert.equal(await balloon.getByRole('button', {name:'Mute'}).count(), 0);
   const portrait = page.locator('.ai-avatar');
   assert.match(await portrait.getAttribute('src'), /\/assistant\.webp$/);
   assert.equal(await portrait.evaluate(async img => { await img.decode(); return img.naturalWidth; }), 174);
@@ -67,6 +66,7 @@ try {
   assert.equal(await page.locator('[data-ai-next]').count(), 0);
   assert.doesNotMatch(await page.locator('.ai-transcript').innerText(), /OH-008|NOT_CLEARED|Not cleared/);
   await page.locator('#ai-app [data-open="records"]').click();
+  assert.ok(await page.evaluate(() => assistantAudio.paused));
   await page.locator('[data-file-id="HR-014"]').click();
   await page.reload(); await ready(page); await openAssistant(page);
   assert.match(await page.locator('.ai-transcript').innerText(), /review remains open/);
