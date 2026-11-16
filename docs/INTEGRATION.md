@@ -144,6 +144,6 @@ Mail's Delete and Restore controls use `setThreadDeleted(id, value)`. Deleted It
 
 ### Demo voice and Footage
 
-Listen in the Assistant balloon reads the current correspondence with browser speech synthesis. Its separate `hilfer:assistant-dialogue:v1` checkpoint tracks completed lines by case and resets with demo progress. Closing the balloon or changing the active dialogue stops playback. The Assistant portrait and wallpaper both use the existing persisted distortion level, so entering Mail does not change either.
+While the Assistant balloon is open, pending correspondence is narrated using browser speech synthesis, with short variable pauses. The player can mute the voice at any time. Completed lines do not replay automatically. Its separate `hilfer:assistant-dialogue:v1` checkpoint tracks completed lines by case and resets with demo progress. Closing the balloon, hiding the page or changing the active dialogue stops the current playback. The Assistant portrait and wallpaper both use the existing persisted distortion level, so entering Mail does not change either.
 
 Footage exposes the supplied CAM 4 clip as a read-only demo preview. It uses native video controls and pauses when its window is closed or minimized. The MP4 retains the source clip audio. No case or gameplay state depends on playback.

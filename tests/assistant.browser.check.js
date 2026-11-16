@@ -37,6 +37,13 @@ const fileJessica = async page => {
 };
 try {
   const page = await browser.newPage({viewport:{width:1440,height:1000}}); listen(page);
+  await page.addInitScript(() => {
+    window.spokenLines = [];
+    Object.defineProperty(window, 'speechSynthesis', {value:{
+      speak(line) { window.spokenLines.push(line.text); },
+      cancel() {}
+    }});
+  });
   await page.goto(target); await ready(page);
   for (const path of ['assets/sounds/glitch.mp3', 'assets/arwa/icons/assistant-pixel.webp']) {
     assert.equal((await page.request.get(new URL(path, target).href)).status(), 200);
@@ -46,8 +53,13 @@ try {
   const launcher = page.locator('#assistant-portrait');
   assert.ok(await launcher.isVisible());
   assert.ok(await balloon.isHidden(), 'the Assistant does not greet automatically');
+  assert.deepEqual(await page.evaluate(() => spokenLines), []);
   await launcher.click();
   assert.ok(await balloon.isVisible());
+  await page.waitForFunction(() => spokenLines.some(text => text.includes('Welcome to HILFER')));
+  const mute = page.locator('[data-assistant-voice]');
+  await mute.click();
+  assert.equal(await mute.getAttribute('aria-pressed'), 'true');
   const portrait = page.locator('.ai-avatar');
   assert.match(await portrait.getAttribute('src'), /\/assistant\.webp$/);
   assert.equal(await portrait.evaluate(async img => { await img.decode(); return img.naturalWidth; }), 174);

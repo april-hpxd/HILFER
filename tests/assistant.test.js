@@ -10,6 +10,7 @@ test('optional narration resumes at the next line and ignores canceled completio
   const storage = {getItem:key => saved.get(key), setItem:(key,value) => saved.set(key,value), removeItem:key => saved.delete(key)};
   let utterance;
   const engine = {
+    pause: () => 0,
     speech: { speak(value) { utterance = value; }, cancel() { utterance?.onend(); } },
     Utterance: class { constructor(text) { this.text = text; } }
   };

@@ -1,7 +1,8 @@
 // Adapted from Lyden King's opt-in dialogue narration in april-hpxd/HILFER.
 export function createAssistantVoice(storage, caseId, {
   speech = globalThis.speechSynthesis,
-  Utterance = globalThis.SpeechSynthesisUtterance
+  Utterance = globalThis.SpeechSynthesisUtterance,
+  pause = () => 340 + Math.random() * 560
 } = {}) {
   const key = 'hilfer:assistant-dialogue:v1';
   const completed = new Set();
@@ -14,8 +15,10 @@ export function createAssistantVoice(storage, caseId, {
 
   let run = 0;
   let speaking = false;
+  let timer;
   function stop() {
     run++;
+    clearTimeout(timer);
     if (speaking) speech.cancel();
     speaking = false;
   }
@@ -30,9 +33,14 @@ export function createAssistantVoice(storage, caseId, {
     play(lines, onActivity) {
       if (!speech || !Utterance) return;
       stop();
-      const pending = lines.filter(line => !completed.has(line.id));
-      const queue = pending.length ? pending : lines.slice(-1);
+      const queue = lines.filter(line => !completed.has(line.id));
+      if (!queue.length) { onActivity(false); return; }
       const token = run;
+      function schedule(index) {
+        const delay = pause();
+        if (delay > 0) timer = setTimeout(() => read(index), delay);
+        else read(index);
+      }
       function read(index) {
         if (token !== run) return;
         const line = queue[index];
@@ -45,11 +53,13 @@ export function createAssistantVoice(storage, caseId, {
         utterance.lang = 'en-US';
         utterance.onend = () => {
           if (token !== run) return;
+          speaking = false;
           completed.add(line.id);
           try {
             storage?.setItem(key, JSON.stringify({version:1, caseId, completedIds:[...completed]}));
           } catch { /* Session checkpoint still works. */ }
-          read(index + 1);
+          if (index + 1 < queue.length) schedule(index + 1);
+          else onActivity(false);
         };
         utterance.onerror = () => {
           if (token !== run) return;
@@ -62,7 +72,7 @@ export function createAssistantVoice(storage, caseId, {
         } catch { utterance.onerror(); }
       }
       onActivity(true);
-      read(0);
+      schedule(0);
     }
   };
 }
