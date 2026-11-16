@@ -9,11 +9,21 @@ class DemoServer(ThreadingHTTPServer):
     request_queue_size = 128
 
 
+class NoCacheHandler(SimpleHTTPRequestHandler):
+    """Local dev/demo server only: browsers otherwise cache static JS/CSS aggressively on
+    heuristics alone (no explicit Cache-Control from SimpleHTTPRequestHandler), so an edit
+    made between reloads during iteration or a live demo can silently keep running stale
+    code. No-store trades that away for always-fresh local requests."""
+    def end_headers(self):
+        self.send_header("Cache-Control", "no-store")
+        super().end_headers()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8080)
     args = parser.parse_args()
-    handler = partial(SimpleHTTPRequestHandler, directory=str(Path(__file__).resolve().parents[1]))
+    handler = partial(NoCacheHandler, directory=str(Path(__file__).resolve().parents[1]))
     with DemoServer(("127.0.0.1", args.port), handler) as server:
         print(f"HILFER: http://127.0.0.1:{args.port}/", flush=True)
         try:

@@ -113,7 +113,7 @@ Checks: `node --test`, existing `node tests/browser.check.js`, and `node tests/a
 
 Display Properties → Color scheme → Archive / Graphite switches to Arwa's desaturated artwork across desktop, title bars, taskbar, Start, department folders, record-file glyphs and the logo. Asset choices live in `css/assets.css`; the palette and Altynai's multiply treatment live in `css/arwa.css`. Theme selection is independent of gameplay/distortion and uses the existing session-only selector. Distortion aliases retain the selected theme; returning to Standard restores its original art. `node tests/theme.browser.check.js` checks both directions, actual Jessica reconciliation, reload and mobile.
 
-Display Properties also offers **Use original logo / Use pixelated logo** for live demo comparisons. It sets presentation-only `data-logo-style` on the root and overrides `--art-desktop-logo`; paper/Start logos are unaffected. An explicit choice remains through color-scheme changes during the session, using the matching pixel variant when appropriate. Reload restores the scheme defaults; no game/save state is changed.
+The desktop uses the pixelated HILFER logo by default. Display Properties still offers **Use original logo / Use pixelated logo** for live demo comparisons. It sets presentation-only `data-logo-style` on the root and overrides `--art-desktop-logo`; paper/Start logos are unaffected. An explicit choice remains through color-scheme changes during the session, using the matching pixel variant when appropriate. Reload restores the pixelated default; no game/save state is changed.
 
 ## HILFER Mail
 
@@ -128,6 +128,129 @@ Read IDs/folder/selected thread and optional selected message ID persist under `
 Checks: `node --test` includes fixed-corpus hash, reference/anchor validation, sorting, access denial/direct lookups/counts, revoked grants, receipt persistence/reset/blocked storage and game-state separation. `node tests/mail.browser.check.js` verifies all 12 exact bodies and metadata, five conversations, empty Sent, search, HR-014 navigation and Jessica, reload/reset, restricted fixture, keyboard/mobile/Graphite, malformed/blocked receipts and window controls.
 
 The standard-library static launcher `scripts/serve.py` (also `npm start`) uses a larger connection accept queue. Default Python HTTP-server backlog intermittently refused simultaneous startup asset requests on this Windows host; five cold boots passed with the increased queue. It serves only static files from the repository, binds localhost and adds no runtime backend or dependency.
+
+## Glitch system (scripted narrative events)
+
+`js/effects/glitch-system.js` exports `mountGlitchSystem(store, {storage, root, sounds})`,
+returning `{triggerGlitch(id, {key, payload, once}), hasTriggered, resetGlitches}`. Each
+glitch is a scripted visual sequence with a defined duration, an associated sound, and a
+cleanup; none mutates evidence, resolutions, case or Mail state. "Already triggered" flags
+are stored separately from gameplay progress under `hilfer:glitches:v1` (`{version,
+triggered}`), following the same pattern as the Assistant's own UI receipt. Malformed or
+unavailable storage degrades to in-session-only behavior, like the rest of the shell.
+`hilfer:progress-reset` clears it via `resetGlitches()`.
+
+Registered glitches: `desktop_distortion` (first glitch — see below), `email_multiplication`
+(visual duplicate windows, triggered on the first opened Mail message in `js/apps/emails.js`) and
+`error_windows` (a cascading, then rapidly self-closing, stack of system-error dialogs, with
+its own error sound). All only ever create transient DOM elements appended to `#desktop` with
+`inert` set where applicable (`desktop_distortion`'s overlay element, plus the echo/dialog
+windows of the other two); none are registered with `script.js`'s window manager (no taskbar
+entry, no real window ID, no focus/z-index persistence), so they cannot corrupt real window or
+Mail state.
+
+**`email_multiplication` triggers on the first opened Mail message**, regardless of folder;
+this makes the second glitch visible during normal inbox use. **`error_windows` remains tied to
+Tito's `MAIL-010`**. Each real message opens first; after a short delay, the applicable visual
+copies or transient system-error dialogs appear, play their supplied sounds, and clean
+themselves up. The actual Mail reader remains usable afterward. These are scoped presentation
+events, not new investigation mechanics.
+
+**`desktop_distortion` (first glitch) — re-added.** A previous iteration of this glitch was
+reverted at the user's request back to the plain `html.microglitch` flourish in
+`js/effects/distortion.js`. The 2026 "Final Glitch Fixes" request explicitly asked for this
+glitch back, considerably more visual, and fixed the white-screen bug the old prototype left
+behind — see "White-screen root cause" below. `html.microglitch` itself is untouched and keeps
+firing its own brief shake on every `hilfer:case-reconciled` (not just the first); the two are
+independent and visually layer rather than conflict.
+
+`desktop_distortion` triggers once, the first time `completedCaseIds.length` reaches 1 (wired
+in `js/main.js`). It appends a `.desktop-glitch-overlay` div to `#desktop` and toggles
+`.desktop-glitch-active` on `#desktop`, driving a five-stage, ~3.4s CSS animation
+(`css/hilfer.css`: `desktopGlitchShift`/`Overlay`/`Jitter` keyframes) — normal completion, an
+initial small-scale RGB/offset disruption, a stronger escalation burst, a quiet beat where the
+AI-state swap (below) lands, then stabilization. The overlay/class are removed by a JS timer
+matched to the animation length, so nothing persists afterward; `prefers-reduced-motion`
+disables the animations.
+
+**White-screen root cause:** the old `:root[data-distortion="1"] #desktop` rule set
+`background-image: linear-gradient(#fdebe8,#fdebe8), var(--wallpaper-distorted)`, but
+`--wallpaper-distorted` was never defined anywhere (it fell back to the initial value `none`),
+so only the near-white gradient layer painted over the entire desktop. The fix removes that
+undefined-var background swap entirely; distortion is now expressed with `filter` on `#desktop`
+plus the scanline overlay already present, and the real wallpaper now lives in
+`--wallpaper-clean` (see "AI state / wallpaper sync" below) instead of being replaced by a
+second, broken variable.
+
+### AI state / wallpaper sync
+
+`js/effects/ai-state.js` exports `mountAIState(store, {storage})` → `{get, set, advance, reset,
+portraitFor, wallpaperFor}`. One integer state (persisted under `hilfer:ai-state:v1`, a UI-only
+namespaced key separate from gameplay saves) drives both the AI assistant's portrait
+(`js/apps/ai.js`, via `aiState.portraitFor(state)`) and the desktop wallpaper (written to the
+`--wallpaper-clean` CSS custom property on `:root`), so the two can never desync. Setting the
+state dispatches `window` event `hilfer:ai-state-changed`, which `ai.js` listens for directly to
+refresh its `<img>` — no separate polling state machine. The two recurring authored milestones
+(first case completion and the first opened Mail message) each skip one intermediate asset
+(`advance(2)`), producing display stages 1 → 3 → 5. Their order is independent; the state
+controller clamps at the last available portrait/wallpaper pair.
+
+`AI_PORTRAITS` / `WALLPAPERS` in that module list the actual supplied files found under
+`assets/arwa/ai_states/` (`ai1.png`, `ai2.png`, `3.png`, `4.png`, `7.png`) and
+`assets/arwa/wallpapers/` (`1.png` through `11.png`, of which `1`–`4` and `7` are used so the
+array lengths line up 1:1 with the AI-portrait array). The filenames carry no explicit ordering
+contract from Arwa; state 0 → 4 is an editorial choice (ai1 "nominal" → ai2 → 3 → 4 → 7
+"most distorted") recorded here so it can be corrected in one place if the intended order
+differs. The first-case `desktop_distortion` advances the shared state at its midpoint, and the
+first Mail-message opening advances it when the email multiplication glitch fires. These are
+meaningful milestones, not arbitrary UI interactions; state does not reset when closing the
+Assistant window. A reload reapplies the saved state to both portrait and wallpaper, and
+`hilfer:progress-reset` resets it to state 0. Reset Demo Progress also clears the session-only
+logo style override so the pixelated logo default is restored.
+
+## Footage application
+
+`js/apps/footage.js` exports `mountFootage(root)`, mounted onto `#footage-app` inside the
+`#footage-window` section in `index.html` (window id `footage`, already present in
+`script.js`'s `applicationTitles`/desktop icon, previously falling back to an auto-generated
+placeholder window because no real markup or app existed yet). `FOOTAGE_ITEMS` is a plain
+array of `{id, title, description, src, staticSrc}`; add entries there for future footage, no
+other code changes required. Only `assets/footage/first hald draft.mov` currently exists and is
+used (there is no second clip — do not add placeholder entries for footage that doesn't
+exist). The player is a native `<video>` with custom play/pause, seek, time, volume and
+fullscreen controls, reusing Reconciliation's `.app-toolbar` / `.reconciliation-tabs` /
+`.case-list` / `.case-detail` classes for visual consistency rather than introducing new chrome.
+`assets/sounds/static-humming.wav` plays (looped) only while the video is actually playing —
+started on the video's `play` event, stopped on `pause`/`ended`/window-close/`pagehide` — never
+on merely opening the app. Browser autoplay restrictions are handled by starting the static
+track from the same `play` event the user's own Play-button click produces, so it has a user
+gesture to piggyback on.
+
+## Reports application
+
+`js/apps/reports.js` exports `mountReports(root)`, mounted onto `#reports-app` inside the
+`#reports-window` section (window id `reports`, same previously-placeholder situation as
+Footage). `REPORT_ITEMS` lists the two files actually found in `assets/reports/` (`3 (1).png`,
+`4 (1).png`) as `format: 'image'`; the viewer renders them with `<img>` at native resolution
+inside a scrollable pane, original files untouched, no added/invented metadata or OCR text.
+`assets/arwa/reports/report_spacco.png` / `report_tim.png` are a separate, unrelated-looking
+pair (likely UI reference art rather than sample case reports) and were **not** added to
+`REPORT_ITEMS` — flag this to Arwa/the team if they were meant to appear here too. A `format:
+'text'` case is scaffolded in `renderViewer` for a plain-text report if one is added later;
+anything else falls back to an explicit "not yet supported" message rather than silently
+omitting the file.
+
+## Custom cursors
+
+`cursor.png` / `cursor_finger.png` are preserved as supplied masters. Their nearest-neighbor
+96px derivatives are reduced again to small 32px-high browser cursor assets
+(`assets/arwa/cursor-small.png`, `assets/arwa/cursor_finger-small.png`) and wired via CSS
+`cursor: url(...) <hotspot-x> <hotspot-y>, <fallback>` in `css/hilfer.css`:
+the default cursor on `html, body`, and the finger cursor on an explicit selector list covering
+buttons, links, desktop icons, tabs, list rows and range inputs across every app (not scoped to
+one window), each with a generic fallback keyword per the CSS spec. The cursor artwork is
+18×32px and 26×32px respectively, with hotspots scaled to match; the supplied masters are not
+replaced or modified.
 
 ### Classic Mail windows (second UI iteration)
 

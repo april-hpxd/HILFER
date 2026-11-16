@@ -1,7 +1,10 @@
 /* Profile/correspondence layout adapted from Altynai; use the workstation's tokens. */
 #ai-app { display: flex; flex-direction: column; min-height: 0; padding: 0; overflow: hidden; }
 .ai-profile { display: flex; align-items: center; gap: 12px; padding: 10px; border-bottom: 1px solid var(--control-edge); background: var(--cabinet-inset); flex: none; }
-.ai-avatar { width: 58px; height: 70px; object-fit: cover; border: 1px solid var(--control-edge); }
+/* Supplied portraits are modest PNGs; avoid upscaling artifacts by never stretching beyond
+   natural size here, keeping aspect ratio and crisp (non-blurred) interpolation at both the
+   small header size and the larger size used by the fullscreen/distortion states. */
+.ai-avatar { width: 58px; height: 70px; object-fit: contain; object-position: center; border: 1px solid var(--control-edge); background: var(--cabinet-inset); image-rendering: -webkit-optimize-contrast; image-rendering: crisp-edges; }
 .ai-profile h1 { font: bold 12px Tahoma, sans-serif; margin: 0 0 5px; }
 .ai-profile p { font-size: 11px; }
 .ai-transcript { flex: 1; min-height: 0; overflow-y: auto; background: var(--paper); padding: 0 12px; }

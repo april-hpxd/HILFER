@@ -22,7 +22,7 @@
   --art-notices: var(--art-file);
   --art-safety-alerts: var(--art-file);
   --art-downloads: url('../assets/arwa/saturated/downloads.png');
-  --art-desktop-logo: url('../assets/arwa/logo.webp');
+  --art-desktop-logo: var(--art-desktop-logo-pixel);
   --art-desktop-logo-pixel: url('../assets/arwa/icons/logo-pixel.webp');
   --art-mail: url('../assets/arwa/icons/mail-pixel.webp');
   --art-ai: var(--art-ai-clean);
@@ -109,7 +109,7 @@
 :root[data-logo-style="smooth"] { --art-desktop-logo: url('../assets/arwa/logo.webp'); }
 :root[data-logo-style="pixel"] { --art-desktop-logo: var(--art-desktop-logo-pixel); }
 .desktop-logo[data-art="logo"] { background-image: var(--art-desktop-logo); }
-:root[data-logo-style="pixel"] .desktop-logo,
-:root[data-theme="archive"]:not([data-logo-style="smooth"]) .desktop-logo { image-rendering: pixelated; }
+:root:not([data-logo-style="smooth"]) .desktop-logo { image-rendering: pixelated; }
+:root[data-logo-style="smooth"] .desktop-logo { image-rendering: auto; }
 
 [data-art="mail"] { background-image: var(--art-mail); }

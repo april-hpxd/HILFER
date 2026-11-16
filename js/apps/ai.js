@@ -28,15 +28,24 @@ export function createAssistantReceipt(storage, notificationId) {
   };
 }
 
-export function mountAI(root, store, content, { storage } = {}) {
+export function mountAI(root, store, content, { storage, aiState } = {}) {
   const receipt = createAssistantReceipt(storage, content.caseId + ':reconciled');
   const notification = document.querySelector('#assistant-notification');
   const announcement = document.querySelector('#assistant-announcement');
   const windowEl = root.closest('.window');
-  root.innerHTML = `<header class="ai-profile"><img class="ai-avatar" src="assets/placeholders/personnel.svg" alt="HILFER Assistant generic profile portrait"><div><h1>HILFER Assistant</h1><p>Internal support</p></div></header>
+  const initialPortrait = aiState ? aiState.portraitFor(aiState.get()) : 'assets/placeholders/personnel.svg';
+  root.innerHTML = `<header class="ai-profile"><img class="ai-avatar" src="${initialPortrait}" alt="HILFER Assistant profile portrait" loading="eager" decoding="async"><div><h1>HILFER Assistant</h1><p>Internal support</p></div></header>
     <div class="ai-transcript" tabindex="-1" role="log" aria-label="Assistant correspondence" aria-live="polite" aria-relevant="additions"></div>
     <div class="ai-actions"><button data-open="reconciliation">Open Reconciliation</button><button data-open="records">Open Records</button></div>
     <p class="ai-status" role="status"></p>`;
+  if (aiState) {
+    const avatar = root.querySelector('.ai-avatar');
+    function syncAvatar() { avatar.src = aiState.portraitFor(aiState.get()); }
+    // ai-state changes outside this module's control (e.g. the glitch-1 handler calling
+    // aiState.advance()); poll on the events that can plausibly follow a state change rather
+    // than adding a second independent subscription system.
+    window.addEventListener('hilfer:ai-state-changed', syncAvatar);
+  }
   let previousPhase;
   let wasUnread = false;
   function update() {

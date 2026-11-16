@@ -1,7 +1,7 @@
 /* HILFER visual tokens: Arwa can replace URLs, colors and glyphs without app changes. */
 :root {
   --desktop-bg: #244c4c; --active-titlebar-start: #183c3e; --active-titlebar-end: #547575;
-  --wallpaper-clean: none; --wallpaper-distorted: none; --paper: #f5f3e8;
+  --wallpaper-clean: url('../assets/arwa/wallpapers/1.png'); --paper: #f5f3e8;
   --brand-ink: #adc5b8; --contamination: #597153;
   --cabinet-plastic: #c0c0c0; --cabinet-inset: #e7e8e2;
   --ledger-ink: #202820; --ledger-secondary: #4c5749; --ledger-metadata: #566150;
@@ -14,7 +14,12 @@
 :root[data-theme="archive"] { --desktop-bg: #363c3d; --active-titlebar-start: #222b2d; --active-titlebar-end: #687274; }
 body { font-family: Tahoma, 'MS Sans Serif', sans-serif; font-size: 12px; }
 button, input, select { font: inherit; }
-button { cursor: pointer; }
+/* Small nearest-neighbor derivatives keep the supplied cursor artwork close to native size. */
+html, body { cursor: url('../assets/arwa/cursor-small.png') 0 0, auto; }
+a, button:not(:disabled), [data-open], [data-control], [data-case], [data-select-footage],
+[data-select-report], [data-footage-view], [role="tab"], .icon, .case-list button,
+.footage-playpause, .footage-fullscreen, summary, input[type="range"], select,
+.source-reference, .claim-apply { cursor: url('../assets/arwa/cursor_finger-small.png') 5 0, pointer; }
 button:disabled { cursor: default; }
 button:focus-visible, input:focus-visible, select:focus-visible, summary:focus-visible, article:focus-visible { outline: 2px dotted #173f42; outline-offset: 2px; }
 #desktop { background-image: var(--wallpaper-clean); background-size: cover; }
@@ -133,12 +138,91 @@ select { font: 11px Tahoma, sans-serif; min-width: 0; width: 100%; padding: 2px;
 .start-menu-item { width: 100%; border: 0; text-align: left; }
 .terminal-label { font: 9px monospace; margin: 0 12px; white-space: nowrap; }
 :root[data-distortion="1"] { --desktop-bg: #2b4b42; --brand-ink: #bac2a1; }
-:root[data-distortion="1"] #desktop { background-image: linear-gradient(#fdebe8, #fdebe8), var(--wallpaper-distorted); }
+/* Root cause of the old white screen: this rule used to set background-image to
+   `linear-gradient(#fdebe8,#fdebe8), var(--wallpaper-distorted)` while --wallpaper-distorted
+   was never defined (it resolved to `none`), leaving only the near-white gradient layer visible
+   over the whole #desktop. The wallpaper itself now carries distortion via filter, so no
+   undefined-var background swap is needed here. */
+:root[data-distortion="1"] #desktop { filter: contrast(1.08) sepia(.12); }
 :root[data-distortion="1"] #desktop::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: repeating-linear-gradient(0deg,transparent 0px,transparent 4px,#bcc69b08 5px); z-index: 99999; }
 :root[data-distortion="1"] .desktop-brand { text-shadow: 2px 0 #abb38355; transform: translateX(2px); }
 html.microglitch #desktop { animation: microglitch .65s steps(1) 1; }
 @keyframes microglitch { 15% { filter: sepia(.3); transform: translateX(2px); } 30% { transform: translateX(-2px); } 55% { filter: contrast(1.12); transform: translateY(1px); } 75% { transform: none; } }
 @media (prefers-reduced-motion: reduce) { html.microglitch #desktop { animation: none; } }
+
+/* --- First glitch: one-time desktop-wide distortion on first case completion --------------
+   Applied to a dedicated overlay (.desktop-glitch-overlay, appended to #desktop, never to
+   <html>/<body>) plus a class toggled on #desktop itself. Five stages, ~3.4s total, cleaned up
+   by JS (js/effects/glitch-system.js) by removing the classes/overlay — nothing here is left
+   persistent. The AI-portrait/wallpaper swap (stage 4) is a JS state change timed to land mid-
+   sequence; this CSS only ever dims/distorts, never hides the desktop (no white/black/opaque
+   full-bleed layer). */
+.desktop-glitch-overlay {
+  position: absolute; inset: 0; z-index: 99998; pointer-events: none; opacity: 0; mix-blend-mode: screen;
+  background: repeating-linear-gradient(0deg, transparent 0 2px, #ffffff14 2px 3px), linear-gradient(90deg, #ff2b4a22, transparent 35%, transparent 65%, #28e1ff22);
+}
+#desktop.desktop-glitch-active { animation: desktopGlitchShift 3.4s cubic-bezier(.2,.6,.2,1) 1; }
+#desktop.desktop-glitch-active .desktop-glitch-overlay { animation: desktopGlitchOverlay 3.4s steps(1, end) 1; }
+#desktop.desktop-glitch-active .desktop-brand,
+#desktop.desktop-glitch-active .session-status { animation: desktopGlitchJitter 3.4s steps(1, end) 1; }
+@keyframes desktopGlitchShift {
+  0%, 8% { filter: none; transform: none; }
+  11% { filter: saturate(1.3) hue-rotate(-6deg); transform: translateX(3px); }
+  14% { transform: translateX(-4px); }
+  17% { transform: translateX(1px); filter: none; }
+  28% { filter: none; transform: none; }
+  34% { filter: contrast(1.3) saturate(1.5) hue-rotate(8deg); transform: translate(-3px,1px) skewX(.6deg); }
+  38% { transform: translate(4px,-1px) skewX(-.6deg); }
+  42% { filter: brightness(1.2) contrast(1.4); transform: translateX(-2px); }
+  46% { filter: contrast(.85); transform: translateX(3px); }
+  50% { filter: none; transform: none; }
+  54% { filter: saturate(1.6) hue-rotate(-10deg); transform: translate(2px,-2px); }
+  58% { transform: translate(-3px,2px); }
+  62% { filter: contrast(1.35); transform: translateX(2px); }
+  66% { filter: none; transform: none; }
+  72% { filter: contrast(1.1) saturate(1.2); transform: translateX(-1px); }
+  85% { filter: contrast(1.04); transform: none; }
+  100% { filter: none; transform: none; }
+}
+@keyframes desktopGlitchOverlay {
+  0%, 8% { opacity: 0; }
+  11%, 16% { opacity: .35; }
+  17%, 27% { opacity: 0; }
+  28%, 48% { opacity: .55; }
+  49%, 51% { opacity: .15; }
+  52%, 66% { opacity: .6; }
+  67%, 71% { opacity: .2; }
+  72%, 84% { opacity: .3; }
+  85%, 100% { opacity: 0; }
+}
+@keyframes desktopGlitchJitter {
+  0%, 8% { transform: none; opacity: 1; }
+  12% { transform: translateX(4px); opacity: .5; }
+  15% { transform: translateX(-3px); opacity: 1; }
+  33% { transform: translate(-3px, 2px); opacity: .4; }
+  36% { transform: translate(3px, -1px); opacity: 1; }
+  55% { transform: translateX(3px); opacity: .5; }
+  58% { transform: none; opacity: 1; }
+  85%, 100% { transform: none; opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #desktop.desktop-glitch-active,
+  #desktop.desktop-glitch-active .desktop-glitch-overlay,
+  #desktop.desktop-glitch-active .desktop-brand,
+  #desktop.desktop-glitch-active .session-status { animation: none; }
+}
+
+/* Glitch windows — short-lived visual echoes (email multiplication, error-window storm).
+   Not registered with the real window manager: no taskbar entry, no focus handling. */
+.glitch-window-echo { opacity: 0; transform: scale(.985); transition: opacity .12s ease, transform .12s ease; pointer-events: none; }
+.glitch-window-echo.glitch-window-echo-in { opacity: 1; transform: none; }
+.system-error-window { width: 300px; height: auto; }
+.system-error-content { display: grid; grid-template-columns: 34px 1fr; grid-template-rows: auto auto; gap: 6px 10px; padding: 14px; align-items: center; }
+.system-error-icon { grid-row: 1 / 2; width: 30px; height: 30px; background: center / contain no-repeat url('../assets/arwa/warnings/system_error.png'); }
+.system-error-content p { margin: 0; font: 11px/1.4 Tahoma, sans-serif; }
+.system-error-ok { grid-column: 2; justify-self: end; padding: 3px 14px; font: 11px Tahoma, sans-serif; }
+@media (prefers-reduced-motion: reduce) { .glitch-window-echo { transition: none; } }
+
 @media (max-width: 700px) {
   .window { width: calc(100vw - 12px) !important; height: calc(100dvh - 74px) !important; }
   .reconciliation-layout { grid-template-columns: 95px minmax(0,1fr); }
@@ -340,3 +424,20 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 1px d
 @media (pointer: coarse) {
   .claim-choice button, .claim-source, .record-details summary { min-height: 32px; }
 }
+
+/* Footage and Reports applications — same toolbar/list/detail pattern as Reconciliation. */
+.footage-detail, .report-viewer { display: flex; flex-direction: column; min-height: 0; }
+.footage-detail h1, .report-viewer h1 { font: bold 13px Tahoma, sans-serif; margin: 8px 0 3px; }
+.footage-id, .report-id { font-size: 10px; color: var(--ledger-metadata); margin-bottom: 8px; }
+.footage-player-shell { position: relative; background: #000; border: 1px solid var(--control-edge); margin-top: 8px; }
+.footage-video { display: block; width: 100%; max-height: 260px; background: #000; }
+.footage-player-status { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 11px; pointer-events: none; text-align: center; padding: 10px; }
+.footage-controls { display: flex; align-items: center; gap: 6px; padding: 6px 8px; background: var(--cabinet-inset); border-top: 1px solid var(--control-edge); flex-wrap: wrap; }
+.footage-playpause, .footage-fullscreen { font: 11px Tahoma, sans-serif; padding: 3px 8px; }
+.footage-time { font: 10px Tahoma, sans-serif; min-width: 32px; text-align: center; }
+.footage-seek { flex: 1; min-width: 80px; }
+.footage-volume-label { display: flex; align-items: center; gap: 4px; font-size: 10px; }
+.footage-volume { width: 60px; }
+.report-scroll { flex: 1; min-height: 0; overflow: auto; background: #a9ada5; padding: 10px; display: flex; justify-content: center; }
+.report-image { max-width: 100%; height: auto; object-fit: contain; border: 1px solid var(--control-edge); background: #fff; }
+.report-text { white-space: pre-wrap; background: var(--paper); padding: 10px; margin: 0; font: 12px/1.5 Tahoma, sans-serif; }

@@ -131,9 +131,13 @@ const toolIcon = kind => {
   return `<svg class="mail-tool-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="${paths[kind]}"/></svg>`;
 };
 
-export function mountMail(root, corpus, { storage, store, openRecord }) {
+// The first opened message triggers email multiplication. MAIL-010 additionally triggers
+// the system-error sequence; both effects leave the real message usable.
+const ERROR_WINDOWS_MESSAGE_ID = 'MAIL-010';
+
+export function mountMail(root, corpus, { storage, store, openRecord, glitch, onEmailGlitch }) {
   const model = createMailModel(corpus, {storage,getRecord:store.getRecord});
-  const mailbox = model.getMailbox(), messageWindows = new Map();
+  const mailbox = model.getMailbox(), messageWindows = new Map(), glitchTimers = new Map();
   const action = (name,label,extra='') => `<button type="button" data-mail-command="${name}" ${extra}>${label}</button>`;
   const menu = (label,items) => `<details class="mail-menu"><summary>${label}</summary><div class="mail-menu-panel">${items}</div></details>`;
   root.innerHTML = `<nav class="mail-menubar" aria-label="Mail menus">
@@ -164,6 +168,8 @@ export function mountMail(root, corpus, { storage, store, openRecord }) {
     }
   }
   function closeMessage(id) {
+    clearTimeout(glitchTimers.get(id));
+    glitchTimers.delete(id);
     const node = messageWindows.get(id); if (!node) return;
     messageWindows.delete(id); window.closeWindow(node.id.slice(0,-7)); node.remove();
   }
@@ -189,6 +195,23 @@ export function mountMail(root, corpus, { storage, store, openRecord }) {
       document.querySelector('#desktop').append(node); messageWindows.set(id,node);
     }
     window.openWindow(node.id.slice(0,-7)); node.querySelector('.mail-message-scroll').focus({preventScroll:true}); render();
+    if (glitch) {
+      // Let the real message open before spawning transient copies or error dialogs.
+      clearTimeout(glitchTimers.get(id));
+      glitchTimers.set(id, setTimeout(() => {
+        glitchTimers.delete(id);
+        if (node.isConnected && messageWindows.get(id) === node) {
+          const fired = glitch.triggerGlitch('email_multiplication', {
+            key: 'email_multiplication:first-open',
+            payload: { sourceWindow: node }
+          });
+          if (fired) onEmailGlitch?.();
+          if (id === ERROR_WINDOWS_MESSAGE_ID) {
+            glitch.triggerGlitch('error_windows', { key: 'error_windows:' + id });
+          }
+        }
+      }, 180));
+    }
   }
   function render() {
     for (const id of [...messageWindows.keys()]) if (!model.getMessage(id)) closeMessage(id);

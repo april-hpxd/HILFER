@@ -389,17 +389,21 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeStartMe
 // Presentation-only demo switch. An explicit choice survives theme changes in this session.
 function updateDesktopLogoControl() {
     const root = document.documentElement;
-    const pixelated = (root.dataset.logoStyle || (root.dataset.theme === 'archive' ? 'pixel' : 'smooth')) === 'pixel';
+    const pixelated = (root.dataset.logoStyle || 'pixel') === 'pixel';
     document.querySelector('#desktop-logo-status').textContent = pixelated ? 'Logo: pixelated' : 'Logo: original';
     document.querySelector('#toggle-desktop-logo').textContent = pixelated ? 'Use original logo' : 'Use pixelated logo';
 }
 document.querySelector('#toggle-desktop-logo').addEventListener('click', () => {
     const root = document.documentElement;
-    const current = root.dataset.logoStyle || (root.dataset.theme === 'archive' ? 'pixel' : 'smooth');
+    const current = root.dataset.logoStyle || 'pixel';
     root.dataset.logoStyle = current === 'pixel' ? 'smooth' : 'pixel';
     updateDesktopLogoControl();
 });
 updateDesktopLogoControl();
+document.querySelector('#reset-progress').addEventListener('click', () => {
+    delete document.documentElement.dataset.logoStyle;
+    updateDesktopLogoControl();
+});
 document.querySelector('#display-theme').addEventListener('change', e => {
     document.documentElement.dataset.theme = e.target.value;
     updateDesktopLogoControl();

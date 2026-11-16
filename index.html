@@ -53,13 +53,21 @@
       <div class="window-header"><span class="window-title">HILFER Mail</span><div class="window-controls"><button class="window-button" data-control="minimize" aria-label="Minimize HILFER Mail">_</button><button class="window-button" data-control="maximize" aria-label="Maximize HILFER Mail">□</button><button class="window-button close-btn" data-control="close" aria-label="Close HILFER Mail">×</button></div></div>
       <div class="window-content" id="emails-app"></div>
     </section>
+    <section class="window" id="footage-window" aria-label="Security Footage" style="top:85px;left:205px;width:560px;height:520px;">
+      <div class="window-header"><span class="window-title">Security Footage</span><div class="window-controls"><button class="window-button" data-control="minimize" aria-label="Minimize Security Footage">_</button><button class="window-button" data-control="maximize" aria-label="Maximize Security Footage">□</button><button class="window-button close-btn" data-control="close" aria-label="Close Security Footage">×</button></div></div>
+      <div class="window-content" id="footage-app"></div>
+    </section>
+    <section class="window" id="reports-window" aria-label="Reports" style="top:95px;left:235px;width:560px;height:520px;">
+      <div class="window-header"><span class="window-title">Reports</span><div class="window-controls"><button class="window-button" data-control="minimize" aria-label="Minimize Reports">_</button><button class="window-button" data-control="maximize" aria-label="Maximize Reports">□</button><button class="window-button close-btn" data-control="close" aria-label="Close Reports">×</button></div></div>
+      <div class="window-content" id="reports-app"></div>
+    </section>
     <section class="window" id="themes-window" aria-label="Display Properties" style="top:100px;left:250px;width:350px;height:250px;">
       <div class="window-header"><span class="window-title">Display Properties</span><div class="window-controls"><button class="window-button" data-control="minimize" aria-label="Minimize Display Properties">_</button><button class="window-button" data-control="maximize" aria-label="Maximize Display Properties">□</button><button class="window-button close-btn" data-control="close" aria-label="Close Display Properties">×</button></div></div>
       <div class="window-content display-settings">
         <h2>Workstation appearance</h2>
         <label for="display-theme">Color scheme</label>
         <select id="display-theme"><option value="default">HILFER Standard</option><option value="archive">Archive / Graphite</option></select>
-        <div class="display-logo-control"><span id="desktop-logo-status" role="status">Logo: original</span><button type="button" id="toggle-desktop-logo">Use pixelated logo</button></div>
+        <div class="display-logo-control"><span id="desktop-logo-status" role="status">Logo: pixelated</span><button type="button" id="toggle-desktop-logo">Use original logo</button></div>
         <p>Interface integrity follows the consolidated record.</p>
         <small>Shell adapted from pollygon-dev/WIN98-template, based on HTML5-Templates.com. Public domain; see LICENSE.</small>
       </div>
@@ -87,6 +95,8 @@
     </div>
   </nav>
   <audio id="glitch-sound" src="assets/sounds/glitch.mp3" preload="none"></audio>
+  <audio id="static-sound" src="assets/sounds/static-humming.wav" preload="none"></audio>
+  <audio id="error-sound" src="assets/sounds/error.wav" preload="none"></audio>
   <script src="script.js" defer></script>
   <script src="js/main.js" type="module"></script>
 </body>

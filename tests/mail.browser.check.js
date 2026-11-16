@@ -44,6 +44,10 @@ try {
  await page.locator('[data-mail-row="MAIL-004"]').click();assert.equal(await page.locator('.mail-message-window').count(),0);
  assert.equal(await page.locator('#mail-count').textContent(),'7 messages (7 unread)');
  await page.locator('[data-mail-row="MAIL-004"]').dblclick();await verifyMessage(page,'MAIL-004');
+ await page.waitForFunction(()=>document.querySelectorAll('.mail-message-window.glitch-window-echo').length===9,{timeout:5000});
+ assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('hilfer:glitches:v1')).triggered.includes('email_multiplication:first-open')));
+ assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('hilfer:ai-state:v1')).state),2,'opening the first email advances portrait and wallpaper to stage 3');
+ assert.equal(await page.locator('.system-error-window').count(),0,'the MAIL-010-specific error sequence does not run on other messages');
  assert.equal(await page.locator('#mail-count').textContent(),'7 messages (6 unread)');
  assert.ok(await page.locator('[data-mail-row="MAIL-005"]').evaluate(el=>el.classList.contains('mail-unread')),'opening one reply does not read its conversation');
  assert.equal(await page.locator('.taskbar-item[data-window="mail-message-MAIL-004"]').textContent(),sourceMessage('MAIL-004').subject);
@@ -81,7 +85,15 @@ try {
  // Every authored message remains individually reachable, byte-exact in the reader.
  for(const id of ['MAIL-001','MAIL-002','MAIL-003','MAIL-006','MAIL-007']){await show(page,id);await verifyMessage(page,id);await closeMessage(page,id);}
  await open(page,'emails');await page.locator('.mail-folders [data-mail-folder="archive"]').click();assert.equal(await page.locator('[data-mail-row]').count(),5);
- for(const id of ['MAIL-008','MAIL-009','MAIL-010','MAIL-011','MAIL-012']){await show(page,id);await verifyMessage(page,id);await closeMessage(page,id);}
+ for(const id of ['MAIL-008','MAIL-009','MAIL-010','MAIL-011','MAIL-012']){
+  await show(page,id);await verifyMessage(page,id);
+  if(id==='MAIL-010'){
+   await page.waitForFunction(()=>document.querySelectorAll('.system-error-window').length>0);
+   assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('hilfer:glitches:v1')).triggered.includes('email_multiplication:first-open')));
+   assert.ok(await page.evaluate(()=>JSON.parse(localStorage.getItem('hilfer:glitches:v1')).triggered.includes('error_windows:MAIL-010')));
+  }
+  await closeMessage(page,id);
+ }
  await open(page,'emails');await page.locator('.mail-folders [data-mail-folder="sent"]').click();assert.equal(await page.locator('[data-mail-row]').count(),0);assert.equal(await page.locator('#mail-count').textContent(),'0 messages (0 unread)');
  for(const query of ['human-resources@hilfer.internal','spreadsheet','Duty-period roster','HR-014']){await page.locator('#mail-search').fill(query);assert.equal(await page.locator('[data-mail-row="MAIL-004"]').count(),1);}
  assert.equal(await page.locator('[data-mail-row]').count(),1,'record search returns the matching message');
@@ -92,9 +104,14 @@ try {
  assert.ok(await page.locator('#records-window').evaluate(el=>el.classList.contains('active')));assert.match(await page.locator('#preview-reference').textContent(),/Jessica — Personnel File/);
  assert.deepEqual(await page.evaluate(()=>hilfer.getState().discoveredEvidenceIds),['HR-014']);assert.deepEqual(await page.evaluate(()=>hilfer.getState().completedCaseIds),[]);
  await page.locator('[data-file-id="OH-008"]').click();await page.locator('.claim-source').click();await page.locator('.claim-apply').click();assert.ok(await page.locator('#assistant-notification').isVisible());
+ await page.waitForFunction(()=>JSON.parse(localStorage.getItem('hilfer:ai-state:v1')).state===4);
+ assert.ok((await page.locator('.ai-avatar').getAttribute('src')).endsWith('/assets/arwa/ai_states/7.png'));
+ assert.ok(await page.locator('html').evaluate(el=>el.style.getPropertyValue('--wallpaper-clean').includes('/wallpapers/7.png')));
  await open(page,'emails');await page.locator('#mail-clear-search').click();await choose(page,'MAIL-001');await page.locator('.mail-toolbar [data-mail-command="unread"]').click();
  assert.equal(await page.locator('#mail-count').textContent(),'7 messages (1 unread)');
  await page.reload();await ready(page);await open(page,'emails');assert.equal(await page.locator('#mail-count').textContent(),'7 messages (1 unread)');assert.equal(await page.locator('.mail-message-window').count(),0);
+ assert.ok((await page.locator('.ai-avatar').getAttribute('src')).endsWith('/assets/arwa/ai_states/7.png'));
+ assert.ok(await page.locator('html').evaluate(el=>el.style.getPropertyValue('--wallpaper-clean').includes('/wallpapers/7.png')));
  assert.equal(await page.evaluate(()=>hilfer.getState().resolutions['CASE-001'].sourceId),'OH-008');
  await page.getByRole('button',{name:'Minimize HILFER Mail',exact:true}).click();await page.locator('.taskbar-item[data-window="emails"]').click();assert.ok(await page.locator('#emails-window').isVisible());
  await page.getByRole('button',{name:'Maximize HILFER Mail',exact:true}).click();assert.equal((await page.locator('#emails-window').boundingBox()).width,1440);await page.getByRole('button',{name:'Maximize HILFER Mail',exact:true}).click();

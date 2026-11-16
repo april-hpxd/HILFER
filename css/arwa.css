@@ -40,16 +40,9 @@
   --button-bg: #d5c6c2;
 }
 :root[data-distortion="1"] { --desktop-bg: #e0c3bf; --brand-ink: #743f43; }
-/* The graphic includes a top label: fit its composition instead of cropping that label. */
-#desktop {
-  background-image: linear-gradient(#fdebe8, #fdebe8), var(--wallpaper-clean);
-  background-position: left top, center;
-  background-repeat: no-repeat;
-  background-size: 360px 48px, 100% 100%;
-}
 .desktop-icons { inset: 0; width: auto; top: 0; left: 0; display: block; pointer-events: none; }
-.desktop-icons .icon { position: absolute; left: 3.2%; width: clamp(78px, 7vw, 94px); padding: 6px 0; pointer-events: auto; touch-action: none; cursor: grab; }
-.desktop-icons .icon:active { cursor: grabbing; }
+.desktop-icons .icon { position: absolute; left: 3.2%; width: clamp(78px, 7vw, 94px); padding: 6px 0; pointer-events: auto; touch-action: none; cursor: url('../assets/arwa/cursor_finger-small.png') 5 0, pointer; }
+.desktop-icons .icon:active { cursor: url('../assets/arwa/cursor-small.png') 0 0, grabbing; }
 .desktop-icons .icon:nth-child(3n + 2) { left: 11.6%; }
 .desktop-icons .icon:nth-child(3n) { left: 20.3%; }
 .desktop-icons .icon:nth-child(-n + 3) { top: 5.2vh; }
@@ -160,7 +153,6 @@
 body, body * { font-family: Tahoma, sans-serif !important; }
 
 @media (max-width: 700px) {
-  #desktop { background-size: 260px 48px, 100% 100%; }
   .desktop-icons .icon { width: 29%; }
   .desktop-icons .icon:nth-child(3n + 1) { left: 3%; }
   .desktop-icons .icon:nth-child(3n + 2) { left: 34%; }
