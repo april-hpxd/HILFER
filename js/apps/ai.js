@@ -1,13 +1,17 @@
 import { escapeHTML as h } from './shared.js';
 import { createAssistantVoice } from './assistant-voice.js';
 
-// Adapted from Altynai's HILFER assistant. Messages are a projection of game state.
+// The demo maps today's game state to dialogue signals. The final game's event
+// sequence can select the same entries without changing their copy or voice.
 export function deriveAssistant(state, records, content) {
   const filed = state.completedCaseIds.includes(content.caseId) && Boolean(state.resolutions[content.caseId]);
   const investigating = records.some(record => record.caseIds.includes(content.caseId) && state.discoveredEvidenceIds.includes(record.id));
   const phase = filed ? 'filed' : investigating ? 'investigating' : 'welcome';
-  return { phase, messages: phase === 'welcome' ? [content.welcome] : [content.welcome, content[phase]],
-    voice: content[phase].voice ?? null,
+  const signal = filed ? 'case.report-filed' : investigating ? 'case.review-started' : 'assignment.available';
+  const entry = content.dialogue.find(message => message.on === signal);
+  const welcome = content.dialogue.find(message => message.on === 'assignment.available');
+  return { phase, messages: [...new Set([welcome, entry])].filter(Boolean),
+    voice: entry?.voice ?? null,
     notificationId: filed ? content.caseId + ':reconciled' : null };
 }
 

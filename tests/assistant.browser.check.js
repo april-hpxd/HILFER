@@ -41,7 +41,7 @@ try {
     const voiceKey = 'hilfer:assistant-dialogue:v1';
     if (!localStorage.getItem(voiceKey)) {
       localStorage.setItem(voiceKey, JSON.stringify({
-        version: 1, caseId: 'CASE-001', completedIds: ['welcome', 'investigating', 'filed']
+        version: 1, caseId: 'CASE-001', completedIds: ['welcome', 'welcome-v2', 'investigating', 'filed']
       }));
     }
     window.assistantPlays = 0;
@@ -67,10 +67,10 @@ try {
   await launcher.click();
   assert.ok(await balloon.isVisible());
   await page.waitForFunction(() => window.assistantAudio?.currentTime > 0);
-  assert.match(await page.evaluate(() => assistantAudio.src), /welcome\.mp3$/);
+  assert.match(await page.evaluate(() => assistantAudio.src), /welcome-v3\.mp3$/);
   assert.equal(await balloon.getByRole('button', {name:'Mute'}).count(), 0);
   await page.waitForFunction(() => assistantAudio.ended);
-  await page.waitForFunction(() => JSON.parse(localStorage.getItem('hilfer:assistant-dialogue:v1')).completedIds.includes('welcome-v2'));
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('hilfer:assistant-dialogue:v1')).completedIds.includes('welcome-v3'));
   await launcher.click();
   await launcher.click();
   assert.equal(await page.evaluate(() => assistantPlays), 1);
