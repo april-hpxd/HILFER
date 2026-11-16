@@ -37,8 +37,6 @@ async function boot() {
   mountMail(document.querySelector('#emails-app'), emails, {storage,store,openRecord});
   mountDistortion(store);
   function update() {
-    const state = store.getState();
-    document.querySelector('#progress').textContent = `${state.completedCaseIds.length} / ${cases.filter(c => !c.placeholder).length} playable assignments reconciled`;
     document.querySelector('#save-status').textContent = store.getWarning();
   }
   store.subscribe(update); update();

@@ -28,7 +28,7 @@ test('fixed corpus matches every supplied value, five threads, twelve messages a
 
 test('folders and chronological ordering are real data projections; full text searches cross only authorized folders', () => {
   const model = createMailModel(corpus);
-  assert.deepEqual(model.getFolders().map(f=>[f.id,f.count,f.unread]), [['inbox',3,3],['sent',0,0],['archive',2,2]]);
+  assert.deepEqual(model.getFolders().map(f=>[f.id,f.count,f.unread]), [['inbox',3,3],['sent',0,0],['archive',2,2],['deleted',0,0]]);
   assert.equal(model.listThreads()[0].id,'THREAD-MEDICAL-ROUTING');
   assert.deepEqual(model.getThread('THREAD-DESK-HANDOFF').messages.map(m=>m.id), ['MAIL-001','MAIL-002','MAIL-003']);
   model.setFolder('sent'); assert.deepEqual(model.listThreads(),[]);
@@ -44,7 +44,7 @@ test('folders and chronological ordering are real data projections; full text se
 test('authorization precedes list, search, count, lookup, direct open, receipts and record references', () => {
   const storage = memory(); storage.setItem(MAIL_UI_KEY, JSON.stringify({version:1,readMessageIds:['SEALED-MESSAGE'],selectedThreadId:'SEALED-THREAD',folderId:'inbox'}));
   const model = createMailModel(fixture(),{storage});
-  assert.deepEqual(model.getFolders().map(f=>f.count), [3,0,2]);
+  assert.deepEqual(model.getFolders().map(f=>f.count), [3,0,2,0]);
   assert.equal(model.getThread('SEALED-THREAD'),null); assert.equal(model.getMessage('SEALED-MESSAGE'),null);
   assert.equal(model.getReference('SEALED-MESSAGE','SEALED-RECORD'),null);
   assert.deepEqual(model.openThread('SEALED-THREAD'), model.openThread('UNKNOWN'));
@@ -149,4 +149,21 @@ test('conversation previews, Sent overlap and whole-thread receipts follow the m
   assert.equal(result.expandedId, 'MAIL-004');
   model.markUnread(thread.id);
   assert.deepEqual(model.getState().readMessageIds, []);
+});
+
+test('Deleted Items is reversible, stays out of normal search, and resets', () => {
+  const storage = memory();
+  const model = createMailModel(corpus, {storage});
+  const id = 'THREAD-ROSTER';
+  assert.equal(model.setThreadDeleted('UNKNOWN', true), false);
+  assert.equal(model.setThreadDeleted(id, true), true);
+  model.setQuery('HR-014');
+  assert.deepEqual(model.listThreads(), []);
+  const saved = createMailModel(corpus, {storage});
+  saved.setFolder('deleted');
+  saved.setQuery('HR-014');
+  assert.equal(saved.listThreads()[0].id, id);
+  saved.reset();
+  assert.ok(saved.listThreads().some(thread => thread.id === id));
+  assert.equal(saved.getFolders().find(folder => folder.id === 'deleted').count, 0);
 });

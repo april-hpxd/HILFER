@@ -40,13 +40,21 @@ export function createMailModel(input, { storage, grants = input.initialGrants, 
   let effectiveGrants = new Set(grants), readIds = new Set(), query = '';
   let folderId = corpus.folders[0].id, selectedThreadId = null, selectedMessageId = null, warning = '';
   const subscribers = new Set();
+  const deleted = new Set();
+  const folders = corpus.folders.map(folder => folder.id === 'archive' ? {...folder, label:'Archive'} : folder);
+  folders.push({id:'deleted', label:'Deleted Items'});
   const authorized = () => corpus.threads.filter(thread => thread.access.requiredGrants.every(grant => effectiveGrants.has(grant)));
   const find = id => authorized().find(thread => thread.id === id);
   const isMe = person => person.address.toLowerCase() === corpus.mailbox.address.toLowerCase();
   const outgoing = thread => thread.messages.filter(message => isMe(message.from));
-  const inFolder = (thread, folder) => folder === 'sent' ? outgoing(thread).length > 0 : thread.folderId === folder;
+  const inFolder = (thread, folder) => {
+    if (folder === 'deleted' || deleted.has(thread.id)) return folder === 'deleted' && deleted.has(thread.id);
+    return folder === 'sent' ? outgoing(thread).length > 0 : thread.folderId === folder;
+  };
+  const inSearch = thread => deleted.has(thread.id) === (folderId === 'deleted');
   const allowedIds = () => new Set(authorized().flatMap(thread => thread.messages.map(message => message.id)));
   function cleanState() {
+    for (const id of deleted) if (!find(id)) deleted.delete(id);
     const allowed = allowedIds(); readIds = new Set([...readIds].filter(id => allowed.has(id)));
     if (!find(selectedThreadId)) selectedThreadId = null;
     if (!authorized().some(thread => thread.messages.some(message => message.id === selectedMessageId))) selectedMessageId = null;
@@ -57,17 +65,18 @@ export function createMailModel(input, { storage, grants = input.initialGrants, 
       const saved = JSON.parse(raw);
       if (saved.version !== 1 || !Array.isArray(saved.readMessageIds)) throw new Error('Old receipt');
       readIds = new Set(saved.readMessageIds);
-      if (corpus.folders.some(folder => folder.id === saved.folderId)) folderId = saved.folderId;
+      if (Array.isArray(saved.deletedThreadIds)) saved.deletedThreadIds.forEach(id => deleted.add(id));
+      if (folders.some(folder => folder.id === saved.folderId)) folderId = saved.folderId;
       if (find(saved.selectedThreadId) && inFolder(find(saved.selectedThreadId), folderId)) selectedThreadId = saved.selectedThreadId;
-      if (authorized().some(thread => thread.folderId === folderId && thread.messages.some(message => message.id === saved.selectedMessageId))) selectedMessageId = saved.selectedMessageId;
+      if (authorized().some(thread => inFolder(thread, folderId) && thread.messages.some(message => message.id === saved.selectedMessageId))) selectedMessageId = saved.selectedMessageId;
     }
   } catch { warning = 'Mail view started with fresh read receipts.'; }
   cleanState();
-  const state = () => ({ folderId, selectedThreadId, selectedMessageId, query, readMessageIds: [...readIds] });
+  const state = () => ({ folderId, selectedThreadId, selectedMessageId, query, readMessageIds: [...readIds], deletedThreadIds: [...deleted] });
   function publish(persist = true) {
     cleanState();
     if (persist) {
-      try { storage?.setItem(MAIL_UI_KEY, JSON.stringify({ version:1, folderId, selectedThreadId, selectedMessageId, readMessageIds:[...readIds] })); }
+      try { storage?.setItem(MAIL_UI_KEY, JSON.stringify({ version:1, folderId, selectedThreadId, selectedMessageId, readMessageIds:[...readIds], deletedThreadIds:[...deleted] })); }
       catch { warning = 'Mail view could not be saved; reading is available for this session.'; }
     }
     subscribers.forEach(fn => fn(state()));
@@ -76,7 +85,7 @@ export function createMailModel(input, { storage, grants = input.initialGrants, 
   const matches = (thread, message, term) => [thread.subject,message.subject ?? '',message.from.name,message.from.address,message.body,...message.to.flatMap(p=>[p.name,p.address]),...message.cc.flatMap(p=>[p.name,p.address]),...message.references.map(r=>r.id)].join('\n').toLowerCase().includes(term);
   function listMessages() {
     const term = query.trim().toLowerCase();
-    return copy(authorized().filter(thread => term || thread.folderId === folderId).flatMap(thread => thread.messages.filter(message => !term || matches(thread,message,term)).map(message => ({...message,subject:message.subject ?? thread.subject,threadId:thread.id,folderId:thread.folderId,unread:!readIds.has(message.id)})))
+    return copy(authorized().filter(thread => term ? inSearch(thread) : inFolder(thread, folderId)).flatMap(thread => thread.messages.filter(message => !term || matches(thread,message,term)).map(message => ({...message,subject:message.subject ?? thread.subject,threadId:thread.id,folderId:thread.folderId,unread:!readIds.has(message.id)})))
       .sort((a,b)=>b.sentAt.localeCompare(a.sentAt) || a.id.localeCompare(b.id)));
   }
   function listThreads() {
@@ -85,7 +94,7 @@ export function createMailModel(input, { storage, grants = input.initialGrants, 
     for (const thread of authorized()) {
       const latest = thread.messages.at(-1);
       const match = term ? thread.messages.findLast(message => matches(thread, message, term)) : null;
-      if (term ? !match : !inFolder(thread, folderId)) continue;
+      if (term ? !match || !inSearch(thread) : !inFolder(thread, folderId)) continue;
       const sent = !term && folderId === 'sent';
       const preview = sent ? outgoing(thread).at(-1) : latest;
       const participants = sent ? preview.to : thread.messages.map(message => message.from);
@@ -108,7 +117,7 @@ export function createMailModel(input, { storage, grants = input.initialGrants, 
   }
   return {
     getState: state, getWarning: () => warning, getMailbox: () => copy(corpus.mailbox),
-    getFolders: () => corpus.folders.map(folder => {
+    getFolders: () => folders.map(folder => {
       const threads = authorized().filter(thread => inFolder(thread, folder.id));
       const messages = threads.flatMap(thread => thread.messages);
       return {...copy(folder), count: threads.length, unread: threads.filter(unread).length,
@@ -118,8 +127,16 @@ export function createMailModel(input, { storage, grants = input.initialGrants, 
     getThread(id) { const thread = find(id); return thread ? copy(thread) : null; },
     getMessage(id) { for (const thread of authorized()) { const message = thread.messages.find(m => m.id === id); if (message) return copy({...message,threadId:thread.id}); } return null; },
     getReference(messageId, recordId) { return this.getMessage(messageId)?.references.find(reference => reference.id === recordId) ?? null; },
-    setFolder(id) { if (!corpus.folders.some(f => f.id === id)) return false; folderId = id; query = ''; selectedThreadId = null; selectedMessageId = null; publish(); return true; },
+    setFolder(id) { if (!folders.some(f => f.id === id)) return false; folderId = id; query = ''; selectedThreadId = null; selectedMessageId = null; publish(); return true; },
     setQuery(value) { query = String(value); if (!listThreads().some(t => t.id === selectedThreadId)) selectedThreadId = null; if (!listMessages().some(m=>m.id===selectedMessageId)) selectedMessageId=null; publish(false); },
+    setThreadDeleted(id, value) {
+      if (!find(id) || typeof value !== 'boolean' || deleted.has(id) === value) return false;
+      if (value) deleted.add(id);
+      else deleted.delete(id);
+      if (selectedThreadId === id) { selectedThreadId = null; selectedMessageId = null; }
+      publish();
+      return true;
+    },
     selectThread(id) {
       if (!find(id)) return {ok:false,message:'Conversation unavailable.'};
       if (selectedThreadId !== id) {
@@ -132,7 +149,7 @@ export function createMailModel(input, { storage, grants = input.initialGrants, 
     openThread(id) {
       const thread = find(id);
       if (!thread) return {ok:false,message:'Conversation unavailable.'};
-      if (!inFolder(thread, folderId) && !query.trim()) folderId = thread.folderId;
+      if (!inFolder(thread, folderId) && !query.trim()) folderId = deleted.has(id) ? 'deleted' : thread.folderId;
       this.selectThread(id);
       setThreadRead(id, true);
       return {ok:true};
@@ -141,16 +158,16 @@ export function createMailModel(input, { storage, grants = input.initialGrants, 
     selectMessage(id) {
       const message=this.getMessage(id); if (!message) return {ok:false,message:'Message unavailable.'};
       if (selectedMessageId===id) return {ok:true};
-      selectedMessageId=id; selectedThreadId=message.threadId; folderId=find(message.threadId).folderId; publish(); return {ok:true};
+      selectedMessageId=id; selectedThreadId=message.threadId; folderId=deleted.has(message.threadId) ? 'deleted' : find(message.threadId).folderId; publish(); return {ok:true};
     },
     openMessage(id) {
       const message=this.getMessage(id); if (!message) return {ok:false,message:'Conversation unavailable.'};
-      selectedMessageId=id; selectedThreadId=message.threadId; folderId=find(message.threadId).folderId; readIds.add(id); publish(); return {ok:true};
+      selectedMessageId=id; selectedThreadId=message.threadId; folderId=deleted.has(message.threadId) ? 'deleted' : find(message.threadId).folderId; readIds.add(id); publish(); return {ok:true};
     },
     setMessageRead(id, read) { if (!this.getMessage(id) || typeof read !== 'boolean') return false; if (readIds.has(id)===read) return true; if (read) readIds.add(id); else readIds.delete(id); publish(); return true; },
     markUnread(id) { return setThreadRead(id, false); },
     setGrants(values) { effectiveGrants = new Set(values); cleanState(); publish(); },
-    reset() { readIds.clear(); query = ''; folderId = corpus.folders[0].id; selectedThreadId = null; selectedMessageId = null; warning = ''; publish(); },
+    reset() { readIds.clear(); deleted.clear(); query = ''; folderId = corpus.folders[0].id; selectedThreadId = null; selectedMessageId = null; warning = ''; publish(); },
     subscribe(fn) { subscribers.add(fn); return () => subscribers.delete(fn); }
   };
 }
@@ -169,7 +186,10 @@ export function renderMailThread(thread) {
 }
 const envelope = unread => `<svg class="mail-envelope" viewBox="0 0 20 18" aria-hidden="true"><path d="${unread ? 'M2 4h16v12H2z M2 4l8 6 8-6' : 'M2 7l8-5 8 5v9H2z M2 7l8 6 8-6'}"/></svg>`;
 const toolIcon = kind => {
-  const paths = {compose:'M2 5h14v12H2z M2 5l7 6 7-6 M11 3l3 3 4-4-3-3z',reply:'M9 3L3 8l6 5V9c5 0 7 2 8 6V9c0-4-4-5-8-5z',forward:'M11 3l6 5-6 5V9c-5 0-7 2-8 6V9c0-4 4-5 8-5z',delete:'M3 3h14v14H3z M6 6l8 8 M14 6l-8 8',move:'M2 6V3h6l2 3h8v11H2z M7 11h7 M11 8l3 3-3 3',open:'M2 7l8-5 8 5v10H2z M2 7l8 6 8-6',previous:'M14 3L7 10l7 7 M7 10h11',next:'M6 3l7 7-7 7 M2 10h11',unread:'M2 4h16v12H2z M2 4l8 6 8-6'};
+  if (['open', 'unread', 'delete', 'restore'].includes(kind)) {
+    return `<img class="mail-tool-icon mail-tool-bitmap" src="assets/win98-mail/${kind}.png" alt="">`;
+  }
+  const paths = {previous:'M14 3L7 10l7 7 M7 10h11',next:'M6 3l7 7-7 7 M2 10h11'};
   return `<svg class="mail-tool-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="${paths[kind]}"/></svg>`;
 };
 
@@ -179,9 +199,8 @@ function snippet(body) {
 
 function renderConversation(thread, expandedId) {
   return thread.messages.map(message => {
-    const initials = message.from.name.split(/\s+/).slice(0, 2).map(part => [...part][0]).join('');
     return `<details class="mail-thread-message" data-message-id="${h(message.id)}" ${message.id === expandedId ? 'open' : ''}>
-      <summary><span class="mail-avatar" aria-hidden="true">${h(initials)}</span><b>${h(message.from.name)}</b>
+      <summary><b>${h(message.from.name)}</b>
         <time datetime="${h(message.sentAt)}">${h(mailDate(message.sentAt))}</time>
         <span class="mail-collapsed-preview">${h(snippet(message.body))}</span></summary>
       <div class="mail-thread-body">${renderMailMessage(message, message.subject ?? thread.subject, true)}</div>
@@ -201,11 +220,12 @@ export function mountMail(root, corpus, { storage, store, openRecord }) {
     ${menu('Mail',action('read','Mark as read','data-needs-selection disabled')+action('unread','Mark as unread','data-needs-selection disabled'))}
     ${menu('Window',action('close-messages','Close conversation windows','disabled'))}<button type="button" disabled>Help</button></nav>
     <div class="mail-toolbar" role="toolbar" aria-label="Mail tools">
-      ${[['compose','Compose'],['reply','Reply'],['reply','Reply All'],['forward','Forward'],['move','Move'],['delete','Delete']].map(([icon,label])=>`<button type="button" disabled title="${label} is unavailable in this demo">${toolIcon(icon)}<span>${label}</span></button>`).join('')}
-      <span class="mail-toolbar-divider" aria-hidden="true"></span>
       ${action('open',toolIcon('open')+'<span>Open</span>','data-needs-selection disabled')}
       ${action('previous',toolIcon('previous')+'<span>Prev</span>','disabled')}${action('next',toolIcon('next')+'<span>Next</span>')}
       ${action('unread',toolIcon('unread')+'<span>Unread</span>','data-needs-selection disabled')}
+      <span class="mail-toolbar-divider" aria-hidden="true"></span>
+      ${action('delete',toolIcon('delete')+'<span>Delete</span>','disabled')}
+      ${action('restore',toolIcon('restore')+'<span>Restore</span>','hidden disabled')}
     </div>
     <div class="mail-account"><b>${h(mailbox.displayName)}</b><span>${h(mailbox.address)}</span></div>
     <form class="mail-search" role="search"><label for="mail-search">Find</label><input id="mail-search" type="search" placeholder="Search all authorized mail" autocomplete="off"><button type="button" id="mail-clear-search">Clear</button></form>
@@ -236,7 +256,7 @@ export function mountMail(root, corpus, { storage, store, openRecord }) {
       const title = row.subject;
       node.setAttribute('aria-label',title);
       const narrow=window.innerWidth<=700;
-      const width = Math.min(620,window.innerWidth-12), height = narrow ? window.innerHeight-48 : Math.min(475,window.innerHeight-48), offset = threadWindows.size % 5 * 28;
+      const width = Math.min(620,window.innerWidth-12), height = narrow ? window.innerHeight-48 : Math.min(390,window.innerHeight-48), offset = threadWindows.size % 5 * 28;
       Object.assign(node.style,{width:width+'px',height:height+'px',left:Math.max(6,Math.min(225+offset,window.innerWidth-width-12))+'px',top:(narrow ? 10 : Math.max(10,Math.min(145+offset,window.innerHeight-height-42)))+'px'});
       node.innerHTML = `<div class="window-header"><span class="window-title">${h(title)}</span><div class="window-controls"><button class="window-button" data-control="minimize" aria-label="Minimize ${h(title)}"></button><button class="window-button" data-control="maximize" aria-label="Maximize ${h(title)}"></button><button class="window-button close-btn" data-control="close" aria-label="Close ${h(title)}"></button></div></div><div class="window-content mail-message-content mail-thread-content" tabindex="-1"></div>`;
       node.addEventListener('click',event=>{
@@ -261,6 +281,12 @@ export function mountMail(root, corpus, { storage, store, openRecord }) {
     for (const id of [...threadWindows.keys()]) if (!model.getThread(id)) closeThread(id);
     const state=model.getState(), folders=model.getFolders(), rows=currentRows();
     const selected=rows.find(message=>message.id===state.selectedThreadId), selectedIndex=rows.findIndex(message=>message.id===state.selectedThreadId);
+    const inDeleted = state.folderId === 'deleted';
+    const deleteButton = root.querySelector('[data-mail-command="delete"]');
+    const restoreButton = root.querySelector('[data-mail-command="restore"]');
+    deleteButton.hidden = inDeleted;
+    restoreButton.hidden = !inDeleted;
+    deleteButton.disabled = restoreButton.disabled = !selected;
     const oldFocus=root.querySelector('.mail-table')?.contains(document.activeElement) ? document.activeElement.dataset.mailRow : null;
     root.querySelectorAll('[data-mail-folder]').forEach(button=>{
       const folder=folders.find(f=>f.id===button.dataset.mailFolder);
@@ -270,7 +296,7 @@ export function mountMail(root, corpus, { storage, store, openRecord }) {
     root.querySelectorAll('[data-folder-unread]').forEach(span=>{const count=folders.find(f=>f.id===span.dataset.folderUnread).unread;span.textContent=count ? ` (${count})` : '';});
     root.querySelector('#mail-search').value=state.query;
     const unreadCount=rows.filter(message=>message.unread).length;
-    root.querySelector('#mail-list-label').textContent=`${state.query.trim() ? 'Search results / all folders' : folders.find(f=>f.id===state.folderId).label} — ${rows.length} conversation${rows.length===1?'':'s'} (${unreadCount} unread)`;
+    root.querySelector('#mail-list-label').textContent=`${state.query.trim() ? (inDeleted ? 'Search / Deleted Items' : 'Search results') : folders.find(f=>f.id===state.folderId).label} — ${rows.length} conversation${rows.length===1?'':'s'} (${unreadCount} unread)`;
     const signature=JSON.stringify(rows.map(row => [row.id, row.unread, row.preview.id, row.participants]));
     if (signature!==rowSignature) {
       root.querySelector('tbody').innerHTML = rows.map(row => {
@@ -309,6 +335,12 @@ export function mountMail(root, corpus, { storage, store, openRecord }) {
     if(command==='open'){event.stopPropagation();openThread(id);}
     if(command==='find')root.querySelector('#mail-search').focus();
     if(command==='read'||command==='unread')model.setThreadRead(id,command==='read');
+    if ((command === 'delete' || command === 'restore') && model.setThreadDeleted(id, command === 'delete')) {
+      closeThread(id);
+      const next = currentRows()[0];
+      if (next) selectRow(next.id);
+      else root.querySelector('.mail-folders [aria-pressed="true"]')?.focus();
+    }
     if(command==='close-mail'){event.stopPropagation();window.closeWindow('emails');}
     if(command==='close-messages')closeThreads();
     if(command==='previous'||command==='next'){const rows=currentRows(), index=rows.findIndex(m=>m.id===id);selectRow(rows[Math.max(0,Math.min(rows.length-1,index+(command==='next'?1:-1)))]?.id);}

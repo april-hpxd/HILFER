@@ -41,11 +41,13 @@
 }
 :root[data-distortion="1"] { --desktop-bg: #e0c3bf; --brand-ink: #743f43; }
 /* The graphic includes a top label: fit its composition instead of cropping that label. */
-#desktop { background-position: center; background-repeat: no-repeat; background-size: 100% 100%; }
-.desktop-icons { top: 80px; }
+/* The last 10% of the source image is a sample taskbar. Crop it behind the live shell. */
+#desktop { background-position: center top; background-repeat: no-repeat; background-size: 100% 112%; }
+.desktop-icons { top: 60px; width: 80px; gap: 12px; }
+.desktop-icons .icon { width: 80px; }
 .desktop-brand { inset: 0; display: grid; place-content: center; opacity: .78; transform: none; text-shadow: none; }
 .desktop-logo { display: block; width: clamp(190px, 24vw, 300px); aspect-ratio: 1; background-position: center; background-size: contain; background-repeat: no-repeat; mix-blend-mode: multiply; }
-.icon-image { width: 48px; height: 48px; background-size: contain; background-position: center; background-repeat: no-repeat; image-rendering: pixelated; background-color: transparent; border: 0; box-shadow: none; }
+.icon-image { width: 32px; height: 32px; background-size: contain; background-position: center; background-repeat: no-repeat; image-rendering: pixelated; background-color: transparent; border: 0; box-shadow: none; }
 .icon-text { color: #402d2e; text-shadow: 0 1px #ffe8e4; }
 .icon:hover, .icon:focus-visible { background: #ffffff40; border-color: #743f43; }
 .window { border-color: #e8c5c0; box-shadow: 3px 4px 0 #4a22244d; }
@@ -144,7 +146,7 @@ input, select { caret-color: var(--control-focus); }
 .document-fields { border-top: 0; padding-top: 0; }
 .document-authorization { line-height: 1.5; }
 .session-status { left: 16px; bottom: 42px; gap: 3px; font: 10px Tahoma, sans-serif; }
-.session-status span:empty { display: none; }
+.session-status:has(> :empty) { display: none; }
 .preview-empty-sheet { display: none; }
 @media (max-width: 450px) { .report-control { flex-wrap: wrap; } }
 

@@ -34,6 +34,13 @@ try {
  await open(page, 'emails');
  assert.equal(await page.locator('[data-mail-row]').count(), 3);
  assert.equal(await page.locator('#mail-count').textContent(), '3 conversations (3 unread)');
+ assert.equal(await page.locator('#progress, #integrity').count(), 0);
+ assert.ok(await page.locator('.mail-toolbar button:visible').evaluateAll(buttons =>
+   buttons.every(button => {
+     const label = button.querySelector('span').getBoundingClientRect();
+     const control = button.getBoundingClientRect();
+     return label.bottom <= control.bottom - 4 && label.right <= control.right - 4;
+   })));
  const roster = corpus.threads.find(thread => thread.id === 'THREAD-ROSTER');
  const rosterRow = row(page, roster.id);
  assert.match(await rosterRow.textContent(), /Human Resources, Operations Scheduling/);
@@ -42,6 +49,20 @@ try {
  await rosterRow.click();
  assert.equal(await page.locator('.mail-message-window').count(), 0);
  assert.equal(await page.locator('#mail-count').textContent(), '3 conversations (3 unread)');
+ await rosterRow.click();
+ await page.locator('[data-mail-command="delete"]').click();
+ assert.equal(await rosterRow.count(), 0);
+ await page.locator('.mail-folders [data-mail-folder="deleted"]').click();
+ await page.reload();
+ await ready(page);
+ await open(page, 'emails');
+ assert.ok(await rosterRow.isVisible());
+ await rosterRow.click();
+ await page.locator('[data-mail-command="restore"]').click();
+ assert.equal(await rosterRow.count(), 0);
+ await page.locator('.mail-folders [data-mail-folder="inbox"]').click();
+ assert.ok(await rosterRow.isVisible());
+ await rosterRow.click();
  await page.keyboard.press('Enter');
  const rosterWindow = reader(page, roster.id);
  assert.ok(await rosterWindow.isVisible());
