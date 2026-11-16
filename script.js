@@ -177,7 +177,8 @@ function initDragAndDrop() {
     preview.hidden = true;
     preview.setAttribute('aria-hidden', 'true');
     document.body.append(preview);
-    const atTopEdge = event => event.clientY >= 0 && event.clientY <= 8;
+    const snapDistance = 12;
+    const atTopEdge = event => event.clientY >= 0 && event.clientY - offset.y <= snapDistance;
     let dragOrigin;
 
     function finishDrag() {

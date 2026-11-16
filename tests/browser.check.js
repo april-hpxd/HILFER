@@ -124,13 +124,15 @@ try {
   const snapPreview = page.locator('.window-snap-preview');
   await page.mouse.move(header.x + 180, header.y + 10);
   await page.mouse.down();
-  await page.mouse.move(header.x + 180, 4, {steps:8});
+  await page.mouse.move(header.x + 180, 16, {steps:8});
+  assert.ok(await snapPreview.isVisible(), 'the top of the window can enter the snap zone before touching the edge');
+  await page.mouse.move(header.x + 180, 9);
   assert.ok(await snapPreview.isVisible());
   assert.equal((await recordsWindow.boundingBox()).y, 0);
   assert.equal((await recordsWindow.boundingBox()).width, resized.width);
   await page.mouse.move(header.x + 180, header.y + 10);
   assert.ok(await snapPreview.isHidden());
-  await page.mouse.move(header.x + 180, 4);
+  await page.mouse.move(header.x + 180, 9);
   await page.mouse.up();
   assert.ok(await snapPreview.isHidden());
   assert.equal((await recordsWindow.boundingBox()).width, 1440);
