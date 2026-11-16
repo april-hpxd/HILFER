@@ -80,6 +80,7 @@
 .mail-thread-message > summary:hover { background:var(--cabinet-inset); }
 .mail-thread-message > summary:focus-visible { outline:1px dotted var(--control-focus); outline-offset:-3px; }
 .mail-avatar {
+ border-radius:50%;
  grid-row:span 2; display:grid; place-items:center; align-self:start;
  width:30px; height:30px; background:var(--cabinet-inset);
  border:1px solid var(--ledger-rule-soft); font-weight:bold;
