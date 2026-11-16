@@ -120,3 +120,33 @@ test('invalid IDs, references and timestamps fail validation; authored text is e
   assert.match(renderMailThread(thread), /&lt;script&gt;unsafe&lt;\/script&gt;\n\nExact spacing\./);
   assert.doesNotMatch(renderMailThread(thread), /<script>/);
 });
+
+test('conversation previews, Sent overlap and whole-thread receipts follow the mailbox', () => {
+  const fixture = structuredClone(corpus);
+  const thread = fixture.threads.find(item => item.id === 'THREAD-ROSTER');
+  const outgoing = thread.messages[0];
+  outgoing.from = { id: 'desk', name: fixture.mailbox.displayName, address: fixture.mailbox.address };
+  const storage = memory();
+  const model = createMailModel(fixture, { storage });
+  const inbox = model.listThreads().find(item => item.id === thread.id);
+  assert.match(inbox.participants, /^me, /);
+  assert.equal(inbox.preview.id, 'MAIL-005');
+  model.setFolder('sent');
+  const [sent] = model.listThreads();
+  assert.equal(sent.id, thread.id);
+  assert.equal(sent.preview.id, outgoing.id);
+  assert.equal(sent.expandedId, outgoing.id);
+  assert.match(sent.participants, /^To: /);
+  model.selectThread(thread.id);
+  assert.deepEqual(model.getState().readMessageIds, []);
+  model.openThread(thread.id);
+  assert.deepEqual(model.getState().readMessageIds, ['MAIL-004', 'MAIL-005']);
+  assert.equal(model.getState().folderId, 'sent');
+  assert.equal(createMailModel(fixture, { storage }).getState().selectedThreadId, thread.id);
+  model.setQuery('HR-014');
+  const [result] = model.listThreads();
+  assert.equal(result.preview.id, 'MAIL-005');
+  assert.equal(result.expandedId, 'MAIL-004');
+  model.markUnread(thread.id);
+  assert.deepEqual(model.getState().readMessageIds, []);
+});

@@ -62,3 +62,31 @@
  .mail-tree-root { font-size:11px; }
 }
 @media (pointer:coarse) { .mail-menubar > button, .mail-menu summary, .mail-folders button, .mail-search button { min-height:28px; } .mail-table tbody td { padding-top:7px; padding-bottom:7px; } }
+.mail-table .mail-from-column { width:190px; }
+.mail-snippet { font-weight:normal; opacity:.82; }
+.mail-thread-content { display:block; overflow:auto; background:var(--paper); }
+.mail-thread-message + .mail-thread-message { border-top:1px solid var(--ledger-rule-soft); }
+.mail-thread-message > summary {
+ display:grid; grid-template-columns:32px minmax(0,1fr) auto; align-items:center;
+ gap:3px 9px; padding:10px 12px; cursor:pointer; list-style:none;
+ font:12px/1.4 Tahoma,sans-serif;
+}
+.mail-thread-message > summary::-webkit-details-marker { display:none; }
+.mail-thread-message > summary:hover { background:var(--cabinet-inset); }
+.mail-thread-message > summary:focus-visible { outline:1px dotted var(--control-focus); outline-offset:-3px; }
+.mail-thread-message > summary b::before { content:'▸'; display:inline-block; width:12px; }
+.mail-thread-message[open] > summary b::before { content:'▾'; }
+.mail-avatar {
+ grid-row:span 2; display:grid; place-items:center; align-self:start;
+ width:30px; height:30px; background:var(--cabinet-inset);
+ border:1px solid var(--ledger-rule-soft); font-weight:bold;
+}
+.mail-thread-message summary time { color:var(--ledger-secondary); font-size:11px; }
+.mail-collapsed-preview { grid-column:2 / -1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ledger-secondary); }
+.mail-thread-message[open] .mail-collapsed-preview { display:none; }
+.mail-thread-message[open] .mail-avatar { grid-row:auto; }
+.mail-thread-body { margin-left:53px; }
+.mail-envelope-details > summary { cursor:pointer; padding-right:12px; color:var(--ledger-secondary); font:11px/1.4 Tahoma,sans-serif; }
+.mail-thread-body .mail-message-fields { margin:0 12px 0 0; padding:6px 8px; font-size:11px; }
+.mail-thread-body .mail-message-scroll { padding:10px 12px 12px 0; overflow:visible; }
+.mail-thread-body .mail-message-status { background:none; border:none; padding:3px 12px 8px 0; color:var(--ledger-secondary); }
