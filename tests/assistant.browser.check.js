@@ -38,9 +38,13 @@ const fileJessica = async page => {
 try {
   const page = await browser.newPage({viewport:{width:1440,height:1000}}); listen(page);
   await page.addInitScript(() => {
+    window.assistantPlays = 0;
     const play = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function () {
-      if (this.src.includes('/assets/sounds/assistant/')) window.assistantAudio = this;
+      if (this.src.includes('/assets/sounds/assistant/')) {
+        window.assistantAudio = this;
+        window.assistantPlays++;
+      }
       return play.call(this);
     };
   });
@@ -59,6 +63,10 @@ try {
   await page.waitForFunction(() => window.assistantAudio?.currentTime > 0);
   assert.match(await page.evaluate(() => assistantAudio.src), /welcome\.mp3$/);
   assert.equal(await balloon.getByRole('button', {name:'Mute'}).count(), 0);
+  await page.waitForFunction(() => assistantAudio.ended);
+  await launcher.click();
+  await launcher.click();
+  assert.equal(await page.evaluate(() => assistantPlays), 1);
   const portrait = page.locator('.ai-avatar');
   assert.match(await portrait.getAttribute('src'), /\/assistant\.webp$/);
   assert.equal(await portrait.evaluate(async img => { await img.decode(); return img.naturalWidth; }), 174);

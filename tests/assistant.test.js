@@ -5,32 +5,35 @@ import { deriveAssistant, createAssistantReceipt, ASSISTANT_RECEIPT_KEY } from '
 import { createStore } from '../js/core/store.js';
 import { createAssistantVoice } from '../js/apps/assistant-voice.js';
 
-test('optional narration resumes at the next line and ignores canceled completions', () => {
+test('narration only speaks fresh cues and ignores canceled completions', () => {
   const saved = new Map();
   const storage = {getItem:key => saved.get(key), setItem:(key,value) => saved.set(key,value), removeItem:key => saved.delete(key)};
   const played = [];
   const engine = {
-    pause: () => 0,
     audio: { play() { played.push(this.src); }, pause() {} }
   };
-  const lines = ['welcome', 'filed'];
+  const welcome = {id:'welcome', src:'welcome.mp3'};
+  const filed = {id:'filed', src:'filed.mp3'};
   const voice = createAssistantVoice(storage, 'CASE-001', engine);
   assert.deepEqual(played, []);
-  voice.play(lines);
+  voice.play(welcome);
   assert.match(played.at(-1), /welcome\.mp3$/);
   engine.audio.onended();
-  assert.match(played.at(-1), /filed\.mp3$/);
+  voice.play(welcome);
+  assert.equal(played.length, 1);
+  voice.play(filed);
   const canceledEnd = engine.audio.onended;
   voice.stop();
   canceledEnd();
   const reloaded = createAssistantVoice(storage, 'CASE-001', engine);
-  reloaded.play(lines);
+  reloaded.play(filed);
   assert.match(played.at(-1), /filed\.mp3$/);
   engine.audio.onended();
-  reloaded.play(lines, {replay:true});
-  assert.match(played.at(-1), /filed\.mp3$/);
+  const count = played.length;
+  reloaded.play(filed);
+  assert.equal(played.length, count);
   reloaded.reset();
-  reloaded.play(lines);
+  reloaded.play(welcome);
   assert.match(played.at(-1), /welcome\.mp3$/);
 });
 const read = name => JSON.parse(readFileSync(new URL('../data/' + name + '.json', import.meta.url), 'utf8'));
@@ -51,6 +54,8 @@ test('assistant derives assignment, investigation and filed correspondence witho
   const snapshot = store.getState(); model(); assert.deepEqual(store.getState(), snapshot);
   store.reconcileClaim('CASE-001', 'OH-008', 'workEligibility');
   assert.equal(model().phase, 'filed'); assert.equal(model().notificationId, 'CASE-001:reconciled');
+  assert.equal(model().voice.id, 'filed');
+  assert.notEqual(model().voice.text, model().messages.at(-1).text);
   assert.equal(model().messages.at(-1).text, content.filed.text);
   const reloaded = createStore({records, cases, storage});
   assert.deepEqual(deriveAssistant(reloaded.getState(), records, content), model());

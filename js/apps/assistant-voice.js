@@ -1,7 +1,6 @@
 // Dialogue checkpoint adapted from Lyden King's Assistant integration.
 export function createAssistantVoice(storage, caseId, {
-  audio = typeof Audio === 'function' ? new Audio() : null,
-  pause = () => 340 + Math.random() * 560
+  audio = typeof Audio === 'function' ? new Audio() : null
 } = {}) {
   const key = 'hilfer:assistant-dialogue:v1';
   const completed = new Set();
@@ -14,10 +13,10 @@ export function createAssistantVoice(storage, caseId, {
 
   if (audio) audio.preload = 'none';
   let run = 0;
-  let timer;
+  let activeId = null;
   function stop() {
     run++;
-    clearTimeout(timer);
+    activeId = null;
     if (!audio) return;
     audio.onended = null;
     audio.onerror = null;
@@ -31,37 +30,28 @@ export function createAssistantVoice(storage, caseId, {
       completed.clear();
       try { storage?.removeItem(key); } catch { /* Session reset still works. */ }
     },
-    play(lines, {replay = false, onError = () => {}} = {}) {
-      if (!audio) return;
+    play(cue, {onError = () => {}} = {}) {
+      if (!audio || !cue || completed.has(cue.id) || activeId === cue.id) return;
       stop();
-      const pending = lines.filter(id => !completed.has(id));
-      const queue = pending.length || !replay ? pending : lines.slice(-1);
       const token = run;
-      function read(index) {
-        if (token !== run || index >= queue.length) return;
-        const id = queue[index];
-        const fail = () => {
-          if (token !== run) return;
-          stop();
-          onError();
-        };
-        audio.onended = () => {
-          if (token !== run) return;
-          completed.add(id);
-          try {
-            storage?.setItem(key, JSON.stringify({version:1, caseId, completedIds:[...completed]}));
-          } catch { /* Session checkpoint still works. */ }
-          if (index + 1 >= queue.length) return;
-          const delay = pause();
-          if (delay > 0) timer = setTimeout(() => read(index + 1), delay);
-          else read(index + 1);
-        };
-        audio.onerror = fail;
-        audio.src = 'assets/sounds/assistant/' + id + '.mp3';
-        try { audio.play()?.catch(fail); } catch { fail(); }
-      }
-      // Start the first line within the same gesture that opened the balloon.
-      read(0);
+      activeId = cue.id;
+      const fail = () => {
+        if (token !== run) return;
+        stop();
+        onError();
+      };
+      audio.onended = () => {
+        if (token !== run) return;
+        activeId = null;
+        completed.add(cue.id);
+        try {
+          storage?.setItem(key, JSON.stringify({version:1, caseId, completedIds:[...completed]}));
+        } catch { /* Session checkpoint still works. */ }
+      };
+      audio.onerror = fail;
+      audio.src = cue.src;
+      // Start within the gesture that opened the balloon.
+      try { audio.play()?.catch(fail); } catch { fail(); }
     }
   };
 }

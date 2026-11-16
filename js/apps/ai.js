@@ -7,6 +7,7 @@ export function deriveAssistant(state, records, content) {
   const investigating = records.some(record => record.caseIds.includes(content.caseId) && state.discoveredEvidenceIds.includes(record.id));
   const phase = filed ? 'filed' : investigating ? 'investigating' : 'welcome';
   return { phase, messages: phase === 'welcome' ? [content.welcome] : [content.welcome, content[phase]],
+    voice: content[phase].voice ?? null,
     notificationId: filed ? content.caseId + ':reconciled' : null };
 }
 
@@ -47,11 +48,10 @@ export function mountAI(root, store, content, { storage } = {}) {
   const balloon = root.querySelector('#assistant-balloon');
   const log = root.querySelector('.ai-transcript');
   const voice = createAssistantVoice(storage, content.caseId);
-  let lines = [];
-  function speakPending(replay = false) {
+  let voiceCue = null;
+  function speakPending() {
     if (balloon.hidden || document.hidden) return;
-    voice.play(lines, {
-      replay,
+    voice.play(voiceCue, {
       onError: () => { announcement.textContent = 'Voice unavailable.'; }
     });
   }
@@ -66,7 +66,7 @@ export function mountAI(root, store, content, { storage } = {}) {
     if (portrait.getAttribute('src') !== portraitSrc) portrait.src = portraitSrc;
     if (model.phase !== previousPhase) {
       voice.stop();
-      lines = model.phase === 'welcome' ? ['welcome'] : ['welcome', model.phase];
+      voiceCue = model.voice;
       log.innerHTML = model.messages.map(message => `<section class="ai-message"><h2>${h(message.label)}</h2><p>${h(message.text)}</p></section>`).join('');
       log.scrollTop = log.scrollHeight;
       previousPhase = model.phase;
@@ -84,7 +84,7 @@ export function mountAI(root, store, content, { storage } = {}) {
     balloon.hidden = !open;
     launcher.setAttribute('aria-expanded', String(open));
     update();
-    if (justOpened) speakPending(true);
+    if (justOpened) speakPending();
     if (open) log.scrollTop = log.scrollHeight;
     if (focus) (open ? log : launcher).focus({preventScroll: true});
   }

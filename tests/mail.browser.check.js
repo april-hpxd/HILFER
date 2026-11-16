@@ -53,12 +53,14 @@ try {
  await page.locator('[data-mail-command="delete"]').click();
  assert.equal(await rosterRow.count(), 0);
  await page.locator('.mail-folders [data-mail-folder="deleted"]').click();
+ assert.match(await page.locator('.mail-folders [data-mail-folder="deleted"] .mail-folder-symbol').evaluate(el => getComputedStyle(el).backgroundImage), /deleted-full\.png/);
  await page.reload();
  await ready(page);
  await open(page, 'emails');
  assert.ok(await rosterRow.isVisible());
  await rosterRow.click();
  await page.locator('[data-mail-command="restore"]').click();
+ assert.match(await page.locator('.mail-folders [data-mail-folder="deleted"] .mail-folder-symbol').evaluate(el => getComputedStyle(el).backgroundImage), /deleted\.png/);
  assert.equal(await rosterRow.count(), 0);
  await page.locator('.mail-folders [data-mail-folder="inbox"]').click();
  assert.ok(await rosterRow.isVisible());

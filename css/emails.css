@@ -30,7 +30,13 @@
 .mail-tree-root { display:flex; gap:4px; align-items:center; padding:4px 5px; font:11px var(--font-ui); }
 .mail-folders button { position:relative; display:flex; gap:4px; align-items:start; margin-left:12px; padding:3px 4px; width:calc(100% - 12px); border:0; border-left:1px dotted var(--ledger-rule); text-align:left; background:transparent; font:11px/1.35 var(--font-ui); }
 .mail-folders button[aria-pressed="true"] { background:var(--routing-blue); color:white; }
-.mail-folder-symbol { flex:none; width:12px; height:11px; margin-top:2px; background:center/contain no-repeat var(--art-records); image-rendering:pixelated; }
+.mail-folder-symbol { flex:none; width:16px; height:16px; background:center/contain no-repeat var(--art-records); image-rendering:pixelated; }
+.mail-folders [data-mail-folder="inbox"] .mail-folder-symbol { background-image:url('../assets/win98-mail/inbox.png'); }
+.mail-folders [data-mail-folder="sent"] .mail-folder-symbol { background-image:url('../assets/win98-mail/sent.png'); }
+.mail-folders [data-mail-folder="archive"] .mail-folder-symbol { background-image:url('../assets/win98-mail/archive.png'); }
+.mail-folders [data-mail-folder="deleted"] .mail-folder-symbol { background-image:url('../assets/win98-mail/deleted.png'); }
+.mail-folders [data-mail-folder="deleted"][data-filled] .mail-folder-symbol { background-image:url('../assets/win98-mail/deleted-full.png'); }
+:root[data-theme="archive"] .mail-folder-symbol { filter:saturate(.3); }
 .mail-list-pane { display:flex; flex-direction:column; min-width:0; min-height:0; background:var(--paper); }
 .mail-table-scroll { flex:1; min-height:0; overflow:auto; }
 .mail-table { width:100%; min-width:535px; table-layout:fixed; border-collapse:separate; border-spacing:0; font:11px/1.35 var(--font-reading); color:var(--ledger-ink); }

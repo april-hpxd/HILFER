@@ -299,6 +299,7 @@ export function mountMail(root, corpus, { storage, store, openRecord }) {
     const oldFocus=root.querySelector('.mail-table')?.contains(document.activeElement) ? document.activeElement.dataset.mailRow : null;
     root.querySelectorAll('[data-mail-folder]').forEach(button=>{
       const folder=folders.find(f=>f.id===button.dataset.mailFolder);
+      if (folder.id === 'deleted') button.toggleAttribute('data-filled', folder.count > 0);
       button.setAttribute('aria-pressed',String(!state.query.trim() && state.folderId===folder.id));
       button.setAttribute('aria-label',`${folder.label}, ${folder.unread} unread conversations`);
     });
