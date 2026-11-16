@@ -172,10 +172,24 @@ function closeStartMenu() {
 }
 
 function initDragAndDrop() {
+    const preview = document.createElement('div');
+    preview.className = 'window-snap-preview';
+    preview.hidden = true;
+    preview.setAttribute('aria-hidden', 'true');
+    document.body.append(preview);
+    const atTopEdge = event => event.clientY >= 0 && event.clientY <= 8;
+    let dragOrigin;
+
+    function finishDrag() {
+        draggedElement = null;
+        preview.hidden = true;
+    }
+
     document.addEventListener('mousedown', function(e) {
         const header = e.target.closest('.window-header');
         if (e.button === 0 && header && !header.parentElement.classList.contains('maximized') && !e.target.closest('.window-controls')) {
             draggedElement = header.parentElement;
+            dragOrigin = {left: draggedElement.style.left, top: draggedElement.style.top};
             const rect = draggedElement.getBoundingClientRect();
             offset.x = e.clientX - rect.left;
             offset.y = e.clientY - rect.top;
@@ -190,19 +204,33 @@ function initDragAndDrop() {
     document.addEventListener('mousemove', function(e) {
         if (draggedElement) {
             // Mouse release outside the browser must not leave a window stuck to the cursor.
-            if (!(e.buttons & 1)) { draggedElement = null; return; }
+            if (!(e.buttons & 1)) { finishDrag(); return; }
             const x = e.clientX - offset.x;
             const y = e.clientY - offset.y;
             // Like desktop windows, edges may extend beyond the visible workspace.
             draggedElement.style.left = x + 'px';
             draggedElement.style.top = y + 'px';
+            preview.hidden = !atTopEdge(e);
         }
     });
 
-    document.addEventListener('mouseup', function() {
-        draggedElement = null;
+    document.addEventListener('mouseup', function(e) {
+        if (e.button !== 0) return;
+        if (draggedElement && !preview.hidden && atTopEdge(e)) {
+            Object.assign(draggedElement.style, dragOrigin);
+            maximizeWindow(draggedElement.id.slice(0, -'-window'.length));
+        }
+        finishDrag();
     });
-    window.addEventListener('blur', () => { draggedElement = null; });
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Escape' || !draggedElement) return;
+        e.preventDefault();
+        e.stopPropagation();
+        Object.assign(draggedElement.style, dragOrigin);
+        finishDrag();
+    }, true);
+    window.addEventListener('blur', finishDrag);
+    window.addEventListener('resize', finishDrag);
 }
 
 // Refit on display-size changes only; never clamp a user's ongoing window movement.
