@@ -132,7 +132,8 @@ try {
   assert.equal((await recordsWindow.boundingBox()).width, resized.width);
   await page.mouse.move(header.x + 180, header.y + 10);
   assert.ok(await snapPreview.isHidden());
-  await page.mouse.move(header.x + 180, 9);
+  await page.mouse.move(header.x + 180, -18);
+  assert.ok(await snapPreview.isVisible(), 'captured drag shows snap preview above the viewport');
   await page.mouse.up();
   assert.ok(await snapPreview.isHidden());
   assert.equal((await recordsWindow.boundingBox()).width, 1440);

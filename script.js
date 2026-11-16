@@ -178,17 +178,28 @@ function initDragAndDrop() {
     preview.setAttribute('aria-hidden', 'true');
     document.body.append(preview);
     const snapDistance = 12;
-    const atTopEdge = event => event.clientY >= 0 && event.clientY - offset.y <= snapDistance;
+    const atTopEdge = event => event.clientY - offset.y <= snapDistance;
     let dragOrigin;
+    let pointerId = null;
+    let dragHandle;
 
     function finishDrag() {
+        const releasedId = pointerId;
+        pointerId = null;
         draggedElement = null;
         preview.hidden = true;
+        if (releasedId !== null && dragHandle?.hasPointerCapture(releasedId)) {
+            dragHandle.releasePointerCapture(releasedId);
+        }
+        dragHandle = null;
     }
 
-    document.addEventListener('mousedown', function(e) {
+    document.addEventListener('pointerdown', function(e) {
         const header = e.target.closest('.window-header');
-        if (e.button === 0 && header && !header.parentElement.classList.contains('maximized') && !e.target.closest('.window-controls')) {
+        if (pointerId === null && e.pointerType === 'mouse' && e.button === 0 && header && !header.parentElement.classList.contains('maximized') && !e.target.closest('.window-controls')) {
+            header.setPointerCapture(e.pointerId);
+            pointerId = e.pointerId;
+            dragHandle = header;
             draggedElement = header.parentElement;
             dragOrigin = {left: draggedElement.style.left, top: draggedElement.style.top};
             const rect = draggedElement.getBoundingClientRect();
@@ -202,8 +213,8 @@ function initDragAndDrop() {
         }
     });
 
-    document.addEventListener('mousemove', function(e) {
-        if (draggedElement) {
+    document.addEventListener('pointermove', function(e) {
+        if (draggedElement && e.pointerId === pointerId) {
             // Mouse release outside the browser must not leave a window stuck to the cursor.
             if (!(e.buttons & 1)) { finishDrag(); return; }
             const x = e.clientX - offset.x;
@@ -224,14 +235,19 @@ function initDragAndDrop() {
         }
     });
 
-    document.addEventListener('mouseup', function(e) {
-        if (e.button !== 0) return;
+    document.addEventListener('pointerup', function(e) {
+        if (e.button !== 0 || e.pointerId !== pointerId) return;
         if (draggedElement && !preview.hidden && atTopEdge(e)) {
             Object.assign(draggedElement.style, dragOrigin);
             maximizeWindow(draggedElement.id.slice(0, -'-window'.length));
         }
         finishDrag();
     });
+    for (const event of ['pointercancel', 'lostpointercapture']) {
+        document.addEventListener(event, e => {
+            if (e.pointerId === pointerId) finishDrag();
+        });
+    }
     document.addEventListener('keydown', e => {
         if (e.key !== 'Escape' || !draggedElement) return;
         e.preventDefault();
