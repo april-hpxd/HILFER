@@ -16,8 +16,11 @@ export function renderRecord(record) {
   const claimControl = `<button type="button" class="claim-source" data-claim-record="${h(record.id)}" data-claim-field="workEligibility" aria-label="Compare ${h(displayValue(record.fields.workEligibility))} from ${h(record.id)} with the report"><strong>${h(displayValue(record.fields.workEligibility))}</strong><small>Compare status with report</small></button>`;
   let content;
   if (record.type === 'personnel_status') {
+    const portrait = record.employeeId === 'EMP-JESSICA'
+      ? '<img src="assets/arwa/portraits/jessica-record.webp" alt="Portrait of Jessica">'
+      : '<img src="assets/placeholders/personnel.svg" alt="Employee portrait placeholder"><figcaption>PHOTO / PENDING</figcaption>';
     content = `<header class="document-heading"><b>HILFER / HUMAN RESOURCES</b><span>Personnel File</span></header>
-      <div class="personnel-identity"><figure class="portrait-placeholder"><img src="assets/placeholders/personnel.svg" alt="Employee portrait placeholder"><figcaption>PHOTO / PENDING</figcaption></figure><div>${identity}</div></div>
+      <div class="personnel-identity"><figure class="portrait-placeholder">${portrait}</figure><div>${identity}</div></div>
       <p class="document-date">Recorded ${h(displayDate(record.date))}</p><section class="document-determination"><h3>Work status</h3>${claimControl}</section>
       <p class="document-note">${h(record.note)}</p>${auditDetails}<footer class="document-authorization"><b>AUTHORIZED HR EXTRACT</b><span>${h(record.department)}</span></footer>`;
   } else if (record.type === 'occupational_health_record') {

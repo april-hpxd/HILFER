@@ -198,10 +198,18 @@ function snippet(body) {
 }
 
 function renderConversation(thread, expandedId) {
+  const portraits = new Map([
+    ['jessica', 'assets/arwa/portraits/jessica-mail.webp'],
+    ['tito', 'assets/arwa/portraits/tito-mail.webp']
+  ]);
   return thread.messages.map(message => {
     const initials = message.from.name.split(/\s+/).slice(0, 2).map(part => [...part][0]).join('');
+    const portrait = portraits.get(message.from.id);
+    const avatar = portrait
+      ? `<img class="mail-avatar" src="${portrait}" alt="">`
+      : `<span class="mail-avatar" aria-hidden="true">${h(initials)}</span>`;
     return `<details class="mail-thread-message" data-message-id="${h(message.id)}" ${message.id === expandedId ? 'open' : ''}>
-      <summary><span class="mail-avatar" aria-hidden="true">${h(initials)}</span><b>${h(message.from.name)}</b>
+      <summary>${avatar}<b>${h(message.from.name)}</b>
         <time datetime="${h(message.sentAt)}">${h(mailDate(message.sentAt))}</time>
         <span class="mail-collapsed-preview">${h(snippet(message.body))}</span></summary>
       <div class="mail-thread-body">${renderMailMessage(message, message.subject ?? thread.subject, true)}</div>

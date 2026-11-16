@@ -95,6 +95,11 @@ try {
    await page.locator('.mail-folders [data-mail-folder="' + thread.folderId + '"]').click();
    const node = await openThread(page, thread.id);
    assert.deepEqual(await node.locator('.mail-body').allTextContents(), thread.messages.map(message => message.body));
+   for (const sender of ['jessica', 'tito']) {
+     if (!thread.messages.some(message => message.from.id === sender)) continue;
+     const portrait = node.locator('img.mail-avatar[src$="' + sender + '-mail.webp"]').first();
+     assert.equal(await portrait.evaluate(async img => { await img.decode(); return img.naturalWidth; }), 96);
+   }
    await node.locator('[data-control="close"]').click();
  }
  await page.locator('#mail-search').fill('HR-014');
@@ -103,6 +108,10 @@ try {
  assert.ok(await rosterWindow.locator('[data-message-id="MAIL-004"][open]').isVisible());
  assert.deepEqual(await page.evaluate(() => hilfer.getState()), initial);
  await rosterWindow.locator('[data-mail-reference="HR-014"]').click();
+ assert.equal(await page.locator('img[alt="Portrait of Jessica"]').evaluate(async img => {
+   await img.decode();
+   return img.naturalWidth;
+ }), 280);
  assert.ok(await page.locator('#records-window.active').isVisible());
  assert.deepEqual(await page.evaluate(() => hilfer.getState().discoveredEvidenceIds), ['HR-014']);
  await page.locator('[data-file-id="OH-008"]').click();

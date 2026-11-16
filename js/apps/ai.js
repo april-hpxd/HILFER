@@ -33,14 +33,19 @@ export function mountAI(root, store, content, { storage } = {}) {
   const notification = document.querySelector('#assistant-notification');
   const announcement = document.querySelector('#assistant-announcement');
   const windowEl = root.closest('.window');
-  root.innerHTML = `<header class="ai-profile"><img class="ai-avatar" src="assets/placeholders/personnel.svg" alt="HILFER Assistant generic profile portrait"><div><h1>HILFER Assistant</h1><p>Internal support</p></div></header>
+  root.innerHTML = `<header class="ai-profile"><img class="ai-avatar" alt="HILFER Assistant portrait"><div><h1>HILFER Assistant</h1><p>Internal support</p></div></header>
     <div class="ai-transcript" tabindex="-1" role="log" aria-label="Assistant correspondence" aria-live="polite" aria-relevant="additions"></div>
     <div class="ai-actions"><button data-open="reconciliation">Open Reconciliation</button><button data-open="records">Open Records</button></div>
     <p class="ai-status" role="status"></p>`;
+  const portrait = root.querySelector('.ai-avatar');
   let previousPhase;
   let wasUnread = false;
   function update() {
-    const model = deriveAssistant(store.getState(), store.getRecords(), content);
+    const state = store.getState();
+    const model = deriveAssistant(state, store.getRecords(), content);
+    const face = state.distortionLevel > 0 ? 'assistant-distorted' : 'assistant';
+    const portraitSrc = `assets/arwa/portraits/${face}.webp`;
+    if (portrait.getAttribute('src') !== portraitSrc) portrait.src = portraitSrc;
     if (model.phase !== previousPhase) {
       const log = root.querySelector('.ai-transcript');
       log.innerHTML = model.messages.map(message => `<section class="ai-message"><h2>${h(message.label)}</h2><p>${h(message.text)}</p></section>`).join('');

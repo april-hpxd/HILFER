@@ -88,6 +88,7 @@
 .mail-collapsed-preview { grid-column:2 / -1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--ledger-secondary); }
 .mail-thread-message[open] .mail-collapsed-preview { display:none; }
 .mail-thread-message[open] .mail-avatar { grid-row:auto; }
+img.mail-avatar { display:block; object-fit:cover; }
 .mail-thread-body { margin-left:53px; }
 .mail-envelope-details > summary { cursor:pointer; padding-right:12px; color:var(--ledger-secondary); font:11px/1.4 var(--font-reading); }
 .mail-envelope-details > summary:hover { text-decoration:underline; }

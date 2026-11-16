@@ -61,7 +61,12 @@ try {
 
   await page.evaluate(() => {
     window.milestones = [];
-    hilfer.onEvent(({type}) => window.milestones.push(type));
+    hilfer.onEvent(({type}) => {
+      window.milestones.push(type);
+      if (type === 'hilfer:case-reconciled') {
+        window.sawGlitch = document.documentElement.classList.contains('microglitch');
+      }
+    });
   });
   await page.locator('.claim-apply').click();
   await page.waitForFunction(() => window.hilfer.getState().completedCaseIds.includes('CASE-001'));
@@ -71,7 +76,7 @@ try {
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 1);
   assert.ok(await page.evaluate(() => hilfer.getState().unlockedCaseIds.includes('CASE-002')));
   assert.equal(await page.locator('html').getAttribute('data-distortion'), '1');
-  assert.ok(await page.locator('html').evaluate(el => el.classList.contains('microglitch')));
+  assert.ok(await page.evaluate(() => window.sawGlitch));
   await page.waitForFunction(() => !document.documentElement.classList.contains('microglitch'));
   await page.evaluate(() => hilfer.reconcileClaim('CASE-001', 'OH-008', 'workEligibility'));
   assert.equal(await page.evaluate(() => milestones.filter(x => x === 'hilfer:case-reconciled').length), 1);

@@ -43,6 +43,9 @@ try {
   }
   assert.ok(await page.locator('#assistant-notification').isHidden());
   await openAssistant(page);
+  const portrait = page.locator('.ai-avatar');
+  assert.match(await portrait.getAttribute('src'), /\/assistant\.webp$/);
+  assert.equal(await portrait.evaluate(async img => { await img.decode(); return img.naturalWidth; }), 174);
   assert.match(await page.locator('.ai-transcript').innerText(), /Welcome to HILFER/);
   assert.equal(await page.locator('[data-ai-next]').count(), 0);
   assert.doesNotMatch(await page.locator('.ai-transcript').innerText(), /OH-008|NOT_CLEARED|Not cleared/);
@@ -65,6 +68,8 @@ try {
   // Unread correspondence survives reload without replaying audiovisual rewards.
   await page.reload(); await ready(page);
   assert.ok(await page.locator('#assistant-notification').isVisible());
+  assert.match(await portrait.getAttribute('src'), /\/assistant-distorted\.webp$/);
+  assert.equal(await portrait.evaluate(async img => { await img.decode(); return img.naturalWidth; }), 174);
   assert.ok(await page.locator('#glitch-sound').evaluate(el => el.paused && el.currentTime === 0));
   assert.ok(await page.locator('html').evaluate(el => !el.classList.contains('microglitch')));
   await page.locator('#assistant-notification').focus();
@@ -89,6 +94,7 @@ try {
   assert.match(await page.locator('.ai-transcript').innerText(), /Welcome to HILFER/);
   assert.doesNotMatch(await page.locator('.ai-transcript').innerText(), /entry for Jessica has been revised/);
   assert.equal(await page.locator('.ai-avatar').evaluate(el => getComputedStyle(el).filter), 'none');
+  assert.match(await portrait.getAttribute('src'), /\/assistant\.webp$/);
   assert.equal(await page.evaluate(() => localStorage.getItem('hilfer:assistant:v1')), null);
   await observe(page); await fileJessica(page);
   await page.waitForFunction(() => cuePlays === 1); assert.ok(await page.locator('#assistant-notification').isVisible());
