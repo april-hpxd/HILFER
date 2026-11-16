@@ -1,0 +1,82 @@
+/* Adapted from 98.css 0.1.21 (MIT). See 98-css.LICENSE and CREDITS.md. */
+
+#emails-app {
+  --surface: var(--button-bg);
+  --button-face: var(--cabinet-inset);
+  --button-highlight: var(--window-border-light);
+  --button-shadow: var(--control-edge);
+  --window-frame: var(--ledger-secondary);
+  --border-raised-outer: inset -1px -1px var(--window-frame),
+    inset 1px 1px var(--button-highlight);
+  --border-raised-inner: inset -2px -2px var(--button-shadow),
+    inset 2px 2px var(--button-face);
+  --border-sunken-outer: inset -1px -1px var(--button-highlight),
+    inset 1px 1px var(--window-frame);
+  --border-sunken-inner: inset -2px -2px var(--button-face),
+    inset 2px 2px var(--button-shadow);
+  --border-field: inset -1px -1px var(--button-highlight),
+    inset 1px 1px var(--button-shadow), inset -2px -2px var(--button-face),
+    inset 2px 2px var(--window-frame);
+  --border-status-field: inset -1px -1px var(--button-face), inset 1px 1px var(--button-shadow);
+}
+
+#emails-app :is(.mail-toolbar, .mail-search) button {
+  box-sizing: border-box;
+  border: none;
+  background: var(--surface);
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  border-radius: 0;
+  min-height: 23px;
+}
+
+#emails-app :is(.mail-toolbar, .mail-search) button:not(:disabled):active {
+  box-shadow: var(--border-sunken-outer), var(--border-sunken-inner);
+}
+
+#emails-app :is(.mail-toolbar, .mail-search) button:focus-visible,
+#emails-app .mail-search input[type="search"]:focus-visible {
+  outline: 1px dotted var(--control-focus);
+  outline-offset: -4px;
+}
+
+#emails-app .mail-search input[type="search"] {
+  border: none;
+  box-shadow: var(--border-field);
+  background-color: var(--paper);
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  border-radius: 0;
+}
+
+#emails-app .mail-folders {
+  display: block;
+  background: var(--paper);
+  box-shadow: var(--border-field);
+  padding: 2px;
+  margin: 0;
+}
+
+#emails-app .mail-table > thead > tr > * {
+  position: sticky;
+  top: 0;
+  height: 17px;
+  box-shadow: var(--border-raised-outer), var(--border-raised-inner);
+  background: var(--surface);
+  box-sizing: border-box;
+  font-weight: normal;
+}
+
+#emails-app .status-bar {
+  margin: 0px 1px;
+  display: flex;
+  gap: 1px;
+}
+
+#emails-app .status-bar-field {
+  box-shadow: var(--border-status-field);
+  flex-grow: 1;
+  padding: 2px 3px;
+  margin: 0;
+}
