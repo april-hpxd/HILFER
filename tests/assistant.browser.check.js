@@ -38,6 +38,12 @@ const fileJessica = async page => {
 try {
   const page = await browser.newPage({viewport:{width:1440,height:1000}}); listen(page);
   await page.addInitScript(() => {
+    const voiceKey = 'hilfer:assistant-dialogue:v1';
+    if (!localStorage.getItem(voiceKey)) {
+      localStorage.setItem(voiceKey, JSON.stringify({
+        version: 1, caseId: 'CASE-001', completedIds: ['welcome', 'investigating', 'filed']
+      }));
+    }
     window.assistantPlays = 0;
     const play = HTMLMediaElement.prototype.play;
     HTMLMediaElement.prototype.play = function () {
@@ -64,6 +70,7 @@ try {
   assert.match(await page.evaluate(() => assistantAudio.src), /welcome\.mp3$/);
   assert.equal(await balloon.getByRole('button', {name:'Mute'}).count(), 0);
   await page.waitForFunction(() => assistantAudio.ended);
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('hilfer:assistant-dialogue:v1')).completedIds.includes('welcome-v2'));
   await launcher.click();
   await launcher.click();
   assert.equal(await page.evaluate(() => assistantPlays), 1);

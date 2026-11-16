@@ -3,16 +3,16 @@
   "welcome": {
     "label": "Assignment received",
     "text": "Welcome to HILFER. Your current assignment is Post-Incident Data Reconciliation. The Consolidated Report is ready for review.",
-    "voice": { "id": "welcome", "src": "assets/sounds/assistant/welcome.mp3", "text": "Good to see you. The consolidated report is ready whenever you are." }
+    "voice": { "id": "welcome-v2", "src": "assets/sounds/assistant/welcome.mp3", "text": "Good to see you. The consolidated report is ready whenever you are." }
   },
   "investigating": {
     "label": "Review pending",
     "text": "Your personnel review remains open. Departmental sources are available in Records; Reconciliation maintains the consolidated entry. No revision has been filed.",
-    "voice": { "id": "investigating", "src": "assets/sounds/assistant/investigating.mp3", "text": "Still comparing sources? Take your time. The entry is still open." }
+    "voice": { "id": "investigating-v2", "src": "assets/sounds/assistant/investigating.mp3", "text": "Still comparing sources? Take your time. The entry is still open." }
   },
   "filed": {
     "label": "Report updated",
     "text": "The work-status entry for Jessica has been revised in the Consolidated Report. Its source references have been retained. The recorded work-related cause has not changed.",
-    "voice": { "id": "filed", "src": "assets/sounds/assistant/filed.mp3", "text": "I have your revision. The report now reflects your decision." }
+    "voice": { "id": "filed-v2", "src": "assets/sounds/assistant/filed.mp3", "text": "I have your revision. The report now reflects your decision." }
   }
 }

@@ -54,7 +54,7 @@ test('assistant derives assignment, investigation and filed correspondence witho
   const snapshot = store.getState(); model(); assert.deepEqual(store.getState(), snapshot);
   store.reconcileClaim('CASE-001', 'OH-008', 'workEligibility');
   assert.equal(model().phase, 'filed'); assert.equal(model().notificationId, 'CASE-001:reconciled');
-  assert.equal(model().voice.id, 'filed');
+  assert.equal(model().voice.id, 'filed-v2');
   assert.notEqual(model().voice.text, model().messages.at(-1).text);
   assert.equal(model().messages.at(-1).text, content.filed.text);
   const reloaded = createStore({records, cases, storage});
