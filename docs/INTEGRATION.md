@@ -8,7 +8,16 @@ From the repository root:
 
     python scripts/serve.py --port 8080
 
-Open http://127.0.0.1:8080. Node 18+ runs domain tests with `node --test` / `npm test`. Optional browser checks: `node tests/browser.check.js` with Playwright and Microsoft Edge installed. `HILFER_URL` defaults to localhost:8080, `HILFER_PLAYWRIGHT_MODULE` can specify the local Playwright package, and `HILFER_SCREENSHOT` controls the screenshot path.
+Open http://127.0.0.1:8080. The launcher binds to localhost and serves static files. Node 18+ runs the unit suites with `node --test` or `npm test`.
+
+For browser checks, keep the server running and install Playwright and Microsoft Edge in your test environment. Set `HILFER_PLAYWRIGHT_MODULE` to the absolute path to Playwright's `index.mjs` if it is installed outside the project. `HILFER_URL` defaults to `http://127.0.0.1:8080`.
+
+```sh
+node tests/browser.check.js
+node tests/assistant.browser.check.js
+node tests/mail.browser.check.js
+node tests/theme.browser.check.js
+```
 
 ## Player-facing flow
 
@@ -118,29 +127,16 @@ Display Properties also offers **Use original logo / Use pixelated logo** for li
 
 ## HILFER Mail
 
-The fixed corpus is `data/emails.json`, copied without content changes from `hilfer_mail_demo_v1.json` (5 threads, 12 messages). [MAIL_CONTRACT.md](MAIL_CONTRACT.md) preserves the supplied contract. All message dates are provisional demo timestamps, not approved chronology; Inbox contains 3 conversations, Corporate Archive 2, and Sent Mail is intentionally empty. This is the authorized Reconciliation Desk mailbox/archive, not a personal account. No Compose, outgoing mail, attachments or new narrative messages are implemented.
+`data/emails.json` is the fixed demo corpus of five conversations and twelve messages. Inbox has three conversations, Archive has two, and Sent has no messages from Reconciliation Desk. All timestamps are provisional. See [MAIL_CONTRACT.md](MAIL_CONTRACT.md) for the original corpus contract.
 
-`js/apps/emails.js` exports `validateMailCorpus`, `createMailModel` and `mountMail`. The model defaults to the corpus's `initialGrants`; `requiredGrants` gates list/search/count/lookup/open/reference access before results are returned. `setGrants(grants)` is the future integration seam and clears unauthorized selection/receipts; no progression unlocks are invented. These are gameplay authorization rules in a static app, not a server-side confidentiality boundary for private data.
+`createMailModel` applies the configured grants before listing, searching, counting, opening or resolving a reference. `setGrants(grants)` updates those gameplay permissions and removes access to any now-restricted reader. The corpus is part of the static app bundle.
 
-`listMessages()`, `selectMessage(id)`, `openMessage(id)`, `setMessageRead(id,read)`, `getMessage(id)`, `getReference(messageId,recordId)`, `setFolder(id)`, `setQuery(text)`, `getFolders()`, `getState()` and `subscribe(fn)` own only Mail UI. The classic table has one row per authorized message, sorted newest first by the supplied local timestamp; search matches individual messages across authorized folders. Selection does not read a message; opening does. Legacy conversation APIs (`listThreads`, `getThread`, `openThread`, `markUnread`) remain for integration compatibility. Search, selection and rendering never call game discovery; only the supplied MAIL-004 reference navigates through existing `openRecord('HR-014')` and normal Records inspection. No OH-008 shortcut or finding is added to Mail.
+- `listThreads()` returns one row per authorized conversation, ordered by its latest applicable message. The row includes a preview. Search expands a matching message when the conversation opens. Sent derives membership from mail actually sent by Reconciliation Desk.
+- `selectThread(id)` selects without marking mail read. `openThread(id)` marks the whole conversation read. Each thread has one independent desktop window with dates, sender details and expandable messages. Readers can coexist, are not restored on reload, and close on demo reset or revoked access.
+- `setThreadDeleted(id, value)` moves or restores a thread locally. Deleted Items has its own search scope and is excluded from ordinary search. Restore returns the thread to its authored folder and any applicable Sent view.
+- `getReference(messageId, recordId)` resolves authorized references. MAIL-004 opens HR-014 through the existing Records API. Reading or moving mail does not change formal Reconciliation state.
 
-Read IDs/folder/selected thread and optional selected message ID persist under `hilfer:mail-ui:v1` with version 1, independently of game/Assistant saves. Invalid or inaccessible storage falls back to safe in-memory reading. `hilfer:progress-reset` clears Mail receipts, query and selection. Keyboard: arrows/Home/End select table rows or folders without reading; Enter opens the selected message, Ctrl+F focuses search, Escape closes a message or menu. Tab/Enter operate native menus, controls and Records links.
-
-Checks: `node --test` includes fixed-corpus hash, reference/anchor validation, sorting, access denial/direct lookups/counts, revoked grants, receipt persistence/reset/blocked storage and game-state separation. `node tests/mail.browser.check.js` verifies all 12 exact bodies and metadata, five conversations, empty Sent, search, HR-014 navigation and Jessica, reload/reset, restricted fixture, keyboard/mobile/Graphite, malformed/blocked receipts and window controls.
-
-The standard-library static launcher `scripts/serve.py` (also `npm start`) uses a larger connection accept queue. Default Python HTTP-server backlog intermittently refused simultaneous startup asset requests on this Windows host; five cold boots passed with the increased queue. It serves only static files from the repository, binds localhost and adds no runtime backend or dependency.
-
-### Classic Mail windows (second UI iteration)
-
-The two supplied reference images govern layout only; their mockup folders/messages were not imported. Mail now has a menu bar, disabled unsupported outgoing actions, a beveled toolbar, a left folder tree, and a message table (state/From/Subject/Received) with no preview. Counts and read icons are per-message; the legacy conversation counts remain available in the model. Prev/Next select rows; Open or double-click/Enter opens the actual message. On narrow screens the table scrolls horizontally instead of dropping columns or shrinking text.
-
-Each reader is a `.window` under `#desktop` registered through existing `openWindow`/`closeWindow`, drag/resize/control/focus/taskbar handling. One reader per message is reused; different messages coexist, survive closing Mail, and show their real subject in title/taskbar. The shell resolves dynamic titles from `.window-title` and emits `hilfer:window-closed` with `{windowId}`. Readers use 14px text and independent body scrolling. Reset removes every reader; permission revocation also removes unauthorized readers. Open windows themselves are not restored after reload, while receipts and selection remain compatible with v1 saves.
-
-### Conversation view
-
-Mail now uses `listThreads()` for its table and opens one OS window per thread. The table shows participants and the latest message preview. Search keeps that preview and expands the newest matching message in the reader. Sent projects authorized threads with at least one message from the mailbox address and uses the latest outgoing message for its row and initial expansion. Opening a conversation marks the entire thread read through `openThread(id)`. Row selection and expansion do not write receipts. The previous message-level APIs remain available for integrations.
-
-Mail's Delete and Restore controls use `setThreadDeleted(id, value)`. Deleted Items is a reversible view stored as optional `deletedThreadIds` in the existing Mail receipt key. Searches from Deleted Items stay in that folder. Other searches exclude deleted threads. Restoring returns a thread to its authored folder and any applicable Sent view. Reset clears the local deletion state.
+Read receipts, selection and optional deleted thread IDs persist under `hilfer:mail-ui:v1`. Demo reset clears them. The message-level APIs remain available for integrations. Use arrows or Home/End to select, Enter to open, Ctrl+F to search, and Esc to close a reader or menu. The table scrolls horizontally in narrow windows.
 
 ### Demo voice and Footage
 
