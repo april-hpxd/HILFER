@@ -23,7 +23,14 @@ async function checkArtwork(page, graphite, logo = 'theme') {
     assert.ok((await icon.evaluate(el => getComputedStyle(el).backgroundImage)).includes(suffix));
     assert.equal(await icon.evaluate(el => getComputedStyle(el).imageRendering), 'pixelated');
     assert.equal(await icon.evaluate(el => getComputedStyle(el).mixBlendMode), graphite ? 'multiply' : 'normal');
-    for (const selector of ['#' + app + '-window .window-title','.taskbar-item[data-window="' + app + '"]','.start-menu-item[data-open="' + app + '"]']) {
+    const selectors = ['.start-menu-item[data-open="' + app + '"]'];
+    if (app === 'ai') {
+      assert.ok(await page.locator('#assistant-portrait').isVisible());
+      assert.equal(await page.locator('.taskbar-item[data-window="ai"]').count(), 0);
+    } else {
+      selectors.push('#' + app + '-window .window-title', '.taskbar-item[data-window="' + app + '"]');
+    }
+    for (const selector of selectors) {
       assert.ok((await page.locator(selector).evaluate(el => getComputedStyle(el,'::before').backgroundImage)).includes(suffix), selector);
     }
   }

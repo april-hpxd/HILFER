@@ -40,53 +40,15 @@
   --button-bg: #d5c6c2;
 }
 :root[data-distortion="1"] { --desktop-bg: #e0c3bf; --brand-ink: #743f43; }
-.desktop-icons { inset: 0; width: auto; top: 0; left: 0; display: block; pointer-events: none; }
-.desktop-icons .icon { position: absolute; left: 3.2%; width: clamp(78px, 7vw, 94px); padding: 6px 0; pointer-events: auto; touch-action: none; cursor: url('../assets/arwa/cursor_finger-small.png') 5 0, pointer; }
-.desktop-icons .icon:active { cursor: url('../assets/arwa/cursor-small.png') 0 0, grabbing; }
-.desktop-icons .icon:nth-child(3n + 2) { left: 11.6%; }
-.desktop-icons .icon:nth-child(3n) { left: 20.3%; }
-.desktop-icons .icon:nth-child(-n + 3) { top: 5.2vh; }
-.desktop-icons .icon:nth-child(n + 4):nth-child(-n + 6) { top: 21.2vh; }
-.desktop-icons .icon:nth-child(n + 7):nth-child(-n + 9) { top: 37.2vh; }
-.desktop-icons .icon:nth-child(n + 10):nth-child(-n + 12) { top: 53.2vh; }
-.desktop-icons .icon:nth-child(n + 13):nth-child(-n + 15) { top: 69.2vh; }
-.desktop-icons .icon:nth-child(16), .desktop-icons .icon:nth-child(17) { top: 85.2vh; }
-.desktop-icons .icon.desktop-icon-right { left: auto; right: 8%; }
-.desktop-icons .icon-safety-alert { top: 16.4vh; }
-.desktop-icons .desktop-icon-downloads { top: 31.2vh; }
-.desktop-icons .icon[data-open="ai"] { left: auto; right: 8%; top: 46.4vh; }
-.desktop-icons .icon[data-open="themes"] { left: auto; right: 8%; top: 61.2vh; }
-.desktop-icons .icon-image { width: clamp(42px, 4.4vw, 54px); height: clamp(42px, 4.4vw, 54px); margin-bottom: 4px; }
-.desktop-icons .icon-text { max-width: 100%; font: 10px/1.1 Tahoma, sans-serif; text-transform: uppercase; overflow-wrap: anywhere; }
-.desktop-icons .icon-safety-alert .icon-image { position: relative; }
-.desktop-icons .icon-safety-alert .icon-image::after {
-  content: '!';
-  position: absolute;
-  top: -3px;
-  right: -2px;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: #865450;
-  color: #fff3ef;
-  font: bold 11px/15px Tahoma, sans-serif;
-}
-.desktop-build {
-  position: absolute;
-  top: 38px;
-  right: 3.2%;
-  z-index: 1;
-  color: #352829;
-  font: 14px/1.2 Tahoma, sans-serif;
-  letter-spacing: 1px;
-  white-space: nowrap;
-}
-.desktop-brand { inset: 0; display: grid; place-content: center; opacity: .78; transform: translateY(-20px); text-shadow: none; }
-.desktop-logo { display: block; width: clamp(240px, 28vw, 330px); aspect-ratio: 1; background-position: center; background-size: contain; background-repeat: no-repeat; mix-blend-mode: multiply; }
-.icon-image { width: clamp(40px, 4vw, 48px); height: clamp(40px, 4vw, 48px); background-size: contain; background-position: center; background-repeat: no-repeat; image-rendering: auto; background-color: transparent; border: 0; box-shadow: none; }
+/* The graphic includes a top label: fit its composition instead of cropping that label. */
+/* The last 10% of the source image is a sample taskbar. Crop it behind the live shell. */
+#desktop { background-position: center top; background-repeat: no-repeat; background-size: 100% 112%; }
+.desktop-icons { top: 60px; width: 80px; gap: 12px; }
+.desktop-icons .icon { width: 80px; }
+.desktop-brand { inset: 0; display: grid; place-content: center; opacity: .78; transform: none; text-shadow: none; }
+.desktop-logo { display: block; width: clamp(190px, 24vw, 300px); aspect-ratio: 1; background-position: center; background-size: contain; background-repeat: no-repeat; mix-blend-mode: multiply; }
+.icon-image { width: 32px; height: 32px; background-size: contain; background-position: center; background-repeat: no-repeat; image-rendering: pixelated; background-color: transparent; border: 0; box-shadow: none; }
 .icon-text { color: #402d2e; text-shadow: 0 1px #ffe8e4; }
-.placeholder-window-content { display: grid; place-items: center; background: var(--cabinet-inset); }
-.placeholder-window-content span { color: var(--ledger-ink); font: 14px Tahoma, sans-serif; }
 .icon:hover, .icon:focus-visible { background: #ffffff40; border-color: #743f43; }
 .window { border-color: #e8c5c0; box-shadow: 3px 4px 0 #4a22244d; }
 .window-header { background: linear-gradient(90deg, var(--active-titlebar-start), var(--active-titlebar-end)); }
@@ -94,7 +56,6 @@
 .window-title { display: flex; align-items: center; gap: 5px; }
 .window-title::before { content: ''; width: 16px; height: 16px; flex: none; background: center / contain no-repeat var(--art-settings); }
 #records-window .window-title::before { background-image: var(--art-records); }
-#ai-window .window-title::before { background-image: var(--art-ai); }
 #reconciliation-window .window-title::before { background-image: var(--art-reconciliation); }
 .window-button { background: var(--button-bg); border-color: #eed1cc; color: #4a3031; }
 .close-btn:hover { background: #87353b !important; }
@@ -127,80 +88,17 @@
 .start-menu-item:hover { background: #853d46; color: #fff; }
 .start-menu-item[data-open]::before, .taskbar-item::before { content: ''; display: inline-block; width: 16px; height: 16px; flex: none; margin-right: 5px; background: center / contain no-repeat var(--art-settings); vertical-align: middle; }
 .start-menu-item[data-open="records"]::before, .taskbar-item[data-window="records"]::before { background-image: var(--art-records); }
-.start-menu-item[data-open="ai"]::before, .taskbar-item[data-window="ai"]::before { background-image: var(--art-ai); }
-.start-menu-item[data-open="reconciliation"]::before, .taskbar-item[data-window="reconciliation"]::before { background-image: var(--art-reconciliation); }
-.start-menu-item[data-open="records"]::before, .taskbar-item[data-window="records"]::before { background-image: var(--art-records); }
 .start-menu-item[data-open="reconciliation"]::before, .taskbar-item[data-window="reconciliation"]::before { background-image: var(--art-reconciliation); }
 .taskbar-item { background: #ca9b97; border-color: #e6beb8; color: #402a2c; }
 .taskbar-item.active { background: #e7c4be; }
 .clock { color: #462e2f; border-color: #c69792; }
 .session-status, .terminal-label { color: #352829; }
 #save-status { color: #7b272e; background: #fff6f1; }
-.taskbar { height: 58px; padding: 4px 8px; }
-.start-button { min-width: 164px; height: 48px; font-size: 26px; font-weight: bold; }
-.shell-logo { width: 40px; height: 40px; background-size: 165%; background-position: center top; }
-.start-menu { bottom: 58px; }
-.session-status #progress, .session-status #integrity { display: none; }
-.report-letterhead, .document-heading { background: right 4px center / 38px 38px no-repeat var(--art-logo); padding-right: 45px; }
-:root[data-distortion="1"] .desktop-brand { transform: none; text-shadow: none; }
-:root[data-distortion="1"] #desktop::after { background: repeating-linear-gradient(0deg, transparent 0 4px, #56242a0a 4px 5px); }
-:root[data-theme="archive"] [data-art],
-:root[data-theme="archive"] .file-symbol,
-:root[data-theme="archive"] .window-title::before,
-:root[data-theme="archive"] .start-menu-item[data-open]::before,
-:root[data-theme="archive"] .taskbar-item::before { mix-blend-mode: multiply; }
-
-body, body * { font-family: Tahoma, sans-serif !important; }
-
-@media (max-width: 700px) {
-  .desktop-icons .icon { width: 29%; }
-  .desktop-icons .icon:nth-child(3n + 1) { left: 3%; }
-  .desktop-icons .icon:nth-child(3n + 2) { left: 34%; }
-  .desktop-icons .icon:nth-child(3n) { left: 65%; }
-  .desktop-icons .icon.desktop-icon-right { left: 3%; right: auto; }
-  .desktop-icons .icon.desktop-icon-downloads { left: 34%; }
-  .desktop-icons .icon[data-open="ai"] { left: 3%; right: auto; top: calc(100dvh - 220px); }
-  .desktop-icons .icon[data-open="themes"] { left: 34%; right: auto; top: calc(100dvh - 220px); }
-  .desktop-icons .icon-image { width: 40px; height: 40px; }
-  .desktop-icons .icon-text { font-size: 9px; }
-  .desktop-icons .icon.desktop-icon-right { top: calc(100dvh - 132px); }
-  .desktop-icons .icon.desktop-icon-downloads { top: calc(100dvh - 132px); }
-  .desktop-build { top: 10px; right: 10px; font-size: 10px; letter-spacing: 0; }
-}
-@media (max-height: 600px) {
-  .desktop-icons .icon { padding: 3px 0; }
-  .desktop-icons .icon-image { width: 38px; height: 38px; }
-  .desktop-icons .icon:nth-child(-n + 3) { top: 32px; }
-  .desktop-icons .icon:nth-child(n + 4):nth-child(-n + 6) { top: 112px; }
-  .desktop-icons .icon:nth-child(n + 7):nth-child(-n + 9) { top: 192px; }
-  .desktop-icons .icon:nth-child(n + 10):nth-child(-n + 12) { top: 272px; }
-  .desktop-icons .icon:nth-child(n + 13):nth-child(-n + 15) { top: 352px; }
-  .desktop-icons .icon[data-open="ai"] { left: 3%; right: auto; top: calc(100dvh - 160px); }
-  .desktop-icons .icon[data-open="themes"] { left: 34%; right: auto; top: calc(100dvh - 160px); }
-  .desktop-icons .icon-safety-alert { top: 92px; }
-  .desktop-icons .desktop-icon-downloads { top: 172px; }
-  .desktop-brand { transform: translateY(36px); }
-}
-@media (max-width: 420px) {
-  .desktop-build { display: none; }
-  .desktop-icons .icon { width: 31%; }
-  .desktop-icons .icon-image { width: 36px; height: 36px; }
-  .desktop-icons .icon-text { font-size: 8px; }
-}
 .report-letterhead, .document-heading { background: right 4px center / 38px 38px no-repeat var(--art-logo); padding-right: 45px; }
 :root[data-distortion="1"] .desktop-brand { transform: none; text-shadow: none; }
 :root[data-distortion="1"] .desktop-logo { filter: sepia(.15) contrast(1.08); opacity: .8; }
 :root[data-distortion="1"] #desktop::after { background: repeating-linear-gradient(0deg, transparent 0 4px, #56242a0a 4px 5px); }
 @media (max-width: 700px) { .desktop-brand { display: grid; } }
-
-/* Graphite assets use the supplied pixel icons and need the white backing blended out. */
-.window-title::before, .taskbar-item::before, .start-menu-item[data-open]::before, .icon-image { image-rendering: pixelated; }
-#emails-window .window-title::before { background-image: var(--art-mail); }
-[data-open="emails"]::before, .taskbar-item[data-window="emails"]::before { background-image: var(--art-mail); }
-.folder-tree button:has(.department-icon) { gap: 4px; }
-.department-icon { display: inline-block; flex: 0 0 20px; width: 20px; height: 20px; background-position: center; background-size: contain; background-repeat: no-repeat; image-rendering: pixelated; }
-.display-logo-control { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 11px; }
-.display-logo-control button { padding: 3px 6px; font-size: 11px; }
 
 /* Impeccable polish: preserve the existing desktop, improve reading and control states. */
 .pane-label, .preview-reference { font-size: 11px; }
@@ -233,27 +131,38 @@ input, select { caret-color: var(--control-focus); }
 .feedback[data-tone="success"] { color: var(--ledger-ink); }
 .pane-label { font-weight: normal; letter-spacing: 0; }
 .report-letterhead { border-top: 0; border-bottom: 1px solid var(--ledger-rule); }
-.report-letterhead b { font: bold 16px Georgia, serif; letter-spacing: 0; }
-.incident-report h1 { font: bold 17px Georgia, serif; margin: 14px 0 10px; }
+.report-letterhead b { font: bold 16px var(--font-reading); letter-spacing: 0; }
+.incident-report h1 { font: bold 17px var(--font-reading); margin: 14px 0 10px; }
 .report-control { font-size: 10px; }
 .report-control b { letter-spacing: 0; }
 .report-control > span { display: none; }
 .report-progress { padding: 7px 0; }
-.report-stamp, .report-filed .report-stamp { border: 0; padding: 0; color: var(--ledger-secondary); font: 10px Tahoma, sans-serif; }
+.report-stamp, .report-filed .report-stamp { border: 0; padding: 0; color: var(--ledger-secondary); font: 10px var(--font-reading); }
 .report-filed .report-stamp { font-weight: bold; color: var(--filed-ink); }
-.report-subject { font: 11px Tahoma, sans-serif; }
-.report-findings strong { font: bold 12px Tahoma, sans-serif; }
+.report-subject { font: 11px var(--font-reading); }
+.report-findings strong { font: bold 12px var(--font-reading); }
 .document-heading { border-top: 0; border-bottom: 1px solid var(--ledger-rule); padding-right: 45px; }
 .document-identity strong { font-size: 15px; }
 .document-fields { border-top: 0; padding-top: 0; }
 .document-authorization { line-height: 1.5; }
-.session-status { left: 16px; bottom: 58px; gap: 3px; font: 10px Tahoma, sans-serif; }
-.session-status span:empty { display: none; }
+.session-status { left: 16px; bottom: 42px; gap: 3px; font: 10px var(--font-ui); }
+.session-status:has(> :empty) { display: none; }
 .preview-empty-sheet { display: none; }
 @media (max-width: 450px) { .report-control { flex-wrap: wrap; } }
+
+/* Arwa's selected pixel icons; logo and wallpaper retain their original rendering. */
+.window-title::before, .taskbar-item::before, .start-menu-item[data-open]::before { image-rendering: pixelated; }
+.folder-tree button:has(.department-icon) { gap: 4px; }
+.department-icon { display: inline-block; flex: 0 0 20px; width: 20px; height: 20px; background-position: center; background-size: contain; background-repeat: no-repeat; image-rendering: pixelated; }
+
+/* Altynai's Graphite treatment: use the supplied desaturated art across the OS. */
+.file-symbol { width: 14px; height: 16px; margin-right: 0; border: 0; background: center / contain no-repeat var(--art-file); image-rendering: pixelated; }
 :root[data-theme="archive"] [data-art],
 :root[data-theme="archive"] .department-icon,
 :root[data-theme="archive"] .file-symbol,
 :root[data-theme="archive"] .window-title::before,
 :root[data-theme="archive"] .start-menu-item[data-open]::before,
 :root[data-theme="archive"] .taskbar-item::before { mix-blend-mode: multiply; }
+
+.display-logo-control { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 11px; }
+.display-logo-control button { padding: 3px 6px; font-size: 11px; }

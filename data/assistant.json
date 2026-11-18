@@ -1,15 +1,23 @@
 {
   "caseId": "CASE-001",
-  "welcome": {
-    "label": "Assignment received",
-    "text": "Welcome to HILFER. Your current assignment is Post-Incident Data Reconciliation. The Consolidated Report is ready for review."
-  },
-  "investigating": {
-    "label": "Review pending",
-    "text": "Your personnel review remains open. Departmental sources are available in Records; Reconciliation maintains the consolidated entry. No revision has been filed."
-  },
-  "filed": {
-    "label": "Report updated",
-    "text": "The work-status entry for Jessica has been revised in the Consolidated Report. Its source references have been retained. The recorded work-related cause has not changed."
-  }
+  "dialogue": [
+    {
+      "on": "assignment.available",
+      "label": "Assignment received",
+      "text": "Welcome to HILFER. Your current assignment is Post-Incident Data Reconciliation. The Consolidated Report is ready for review.",
+      "voice": { "id": "welcome-v3", "src": "assets/sounds/assistant/welcome-v3.mp3" }
+    },
+    {
+      "on": "case.review-started",
+      "label": "Review pending",
+      "text": "Your personnel review remains open. Departmental sources are available in Records; Reconciliation maintains the consolidated entry. No revision has been filed.",
+      "voice": { "id": "investigating-v3", "src": "assets/sounds/assistant/investigating-v3.mp3" }
+    },
+    {
+      "on": "case.report-filed",
+      "label": "Report updated",
+      "text": "The work-status entry for Jessica has been revised in the Consolidated Report. Its source references have been retained. The recorded work-related cause has not changed.",
+      "voice": { "id": "filed-v3", "src": "assets/sounds/assistant/filed-v3.mp3" }
+    }
+  ]
 }

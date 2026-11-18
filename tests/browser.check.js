@@ -115,7 +115,12 @@ try {
 
   await page.evaluate(() => {
     window.milestones = [];
-    hilfer.onEvent(({type}) => window.milestones.push(type));
+    hilfer.onEvent(({type}) => {
+      window.milestones.push(type);
+      if (type === 'hilfer:case-reconciled') {
+        window.sawGlitch = document.documentElement.classList.contains('microglitch');
+      }
+    });
   });
   await page.locator('.claim-apply').click();
   await page.waitForFunction(() => window.hilfer.getState().completedCaseIds.includes('CASE-001'));
@@ -125,7 +130,8 @@ try {
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 1);
   assert.ok(await page.evaluate(() => hilfer.getState().unlockedCaseIds.includes('CASE-002')));
   assert.equal(await page.locator('html').getAttribute('data-distortion'), '1');
-  assert.ok(await page.locator('html').evaluate(el => el.classList.contains('microglitch')));
+  assert.match(await page.locator('#desktop').evaluate(el => getComputedStyle(el).backgroundImage), /wallpaper-distorted\.webp/);
+  assert.ok(await page.evaluate(() => window.sawGlitch));
   await page.waitForFunction(() => !document.documentElement.classList.contains('microglitch'));
   await page.evaluate(() => hilfer.reconcileClaim('CASE-001', 'OH-008', 'workEligibility'));
   assert.equal(await page.evaluate(() => milestones.filter(x => x === 'hilfer:case-reconciled').length), 1);
@@ -149,6 +155,7 @@ try {
   await page.locator('#reset-progress').click();
   assert.equal(await page.evaluate(() => hilfer.getState().completedCaseIds.length), 0);
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 0);
+  assert.match(await page.locator('#desktop').evaluate(el => getComputedStyle(el).backgroundImage), /\/wallpaper\.webp/);
   await page.locator('[data-open="reconciliation"]').first().click();
   for (const text of ['Available for duty', 'Unverified']) assert.ok((await report.textContent()).includes(text));
 
@@ -174,12 +181,59 @@ try {
   await page.locator('#record-preview').evaluate(el => { el.scrollTop = el.scrollHeight; });
   assert.ok(await page.locator('#record-preview').evaluate(el => el.scrollHeight <= el.clientHeight || el.scrollTop > 0));
   const header = await page.locator('#records-window .window-header').boundingBox();
+  const recordsWindow = page.locator('#records-window');
+  const snapPreview = page.locator('.window-snap-preview');
+  await page.mouse.move(header.x + 180, header.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(header.x + 180, 16, {steps:8});
+  assert.ok(await snapPreview.isVisible(), 'the top of the window can enter the snap zone before touching the edge');
+  await page.mouse.move(header.x + 180, 9);
+  assert.ok(await snapPreview.isVisible());
+  assert.equal((await recordsWindow.boundingBox()).y, 0);
+  assert.equal((await recordsWindow.boundingBox()).width, resized.width);
+  await page.mouse.move(header.x + 180, header.y + 10);
+  assert.ok(await snapPreview.isHidden());
+  await page.mouse.move(header.x + 180, -18);
+  assert.ok(await snapPreview.isVisible(), 'captured drag shows snap preview above the viewport');
+  await page.mouse.up();
+  assert.ok(await snapPreview.isHidden());
+  assert.equal((await recordsWindow.boundingBox()).width, 1440);
+  await recordsWindow.getByRole('button', {name:'Maximize Records', exact:true}).click();
+  assert.deepEqual(await recordsWindow.boundingBox(), resized);
+  await page.mouse.move(header.x + 180, header.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(header.x + 180, 4);
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  assert.ok(await snapPreview.isHidden());
+  assert.deepEqual(await recordsWindow.boundingBox(), resized);
   await page.mouse.move(header.x + 180, header.y + 10); await page.mouse.down();
   await page.mouse.move(5, header.y + 10, {steps:12}); await page.mouse.up();
   const released = await page.locator('#records-window').boundingBox();
   assert.ok(released.x < 0, 'window can move past the viewport edge');
   await page.mouse.move(100, 100);
   assert.deepEqual(await page.locator('#records-window').boundingBox(), released);
+  await recordsWindow.getByRole('button', {name:'Maximize Records', exact:true}).click();
+  await page.mouse.click(720, 10);
+  assert.equal((await recordsWindow.boundingBox()).width, 1440, 'clicking the title bar keeps the window maximized');
+  await page.mouse.move(720, 10);
+  await page.mouse.down();
+  await page.mouse.move(740, 110, {steps:10});
+  const dragged = await recordsWindow.boundingBox();
+  assert.equal(dragged.width, resized.width);
+  assert.equal(dragged.height, resized.height);
+  assert.equal(dragged.y, 100);
+  assert.ok(Math.abs(dragged.x + dragged.width / 2 - 740) <= 1, 'the restored title bar stays under the pointer');
+  await page.mouse.up();
+  assert.deepEqual(await recordsWindow.boundingBox(), dragged);
+  await page.locator('.desktop-icons [data-open="footage"]').click();
+  const video = page.locator('#footage-window video');
+  assert.ok(await video.isVisible());
+  assert.ok(await video.evaluate(el => el.paused));
+  await video.evaluate(async el => { el.muted = true; await el.play(); });
+  assert.ok(await video.evaluate(el => el.videoWidth > 0 && el.duration > 5));
+  await page.getByRole('button', {name:'Minimize Footage', exact:true}).click();
+  assert.ok(await video.evaluate(el => el.paused));
   for (const asset of ['logo', 'wallpaper', 'records', 'reconciliation', 'settings']) {
     assert.equal((await page.request.get(new URL('/assets/arwa/' + asset + '.webp', target).href)).status(), 200);
   }

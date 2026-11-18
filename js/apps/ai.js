@@ -1,11 +1,17 @@
 import { escapeHTML as h } from './shared.js';
+import { createAssistantVoice } from './assistant-voice.js';
 
-// Adapted from Altynai's HILFER assistant. Messages are a projection of game state.
+// The demo maps today's game state to dialogue signals. The final game's event
+// sequence can select the same entries without changing their copy or voice.
 export function deriveAssistant(state, records, content) {
   const filed = state.completedCaseIds.includes(content.caseId) && Boolean(state.resolutions[content.caseId]);
   const investigating = records.some(record => record.caseIds.includes(content.caseId) && state.discoveredEvidenceIds.includes(record.id));
   const phase = filed ? 'filed' : investigating ? 'investigating' : 'welcome';
-  return { phase, messages: phase === 'welcome' ? [content.welcome] : [content.welcome, content[phase]],
+  const signal = filed ? 'case.report-filed' : investigating ? 'case.review-started' : 'assignment.available';
+  const entry = content.dialogue.find(message => message.on === signal);
+  const welcome = content.dialogue.find(message => message.on === 'assignment.available');
+  return { phase, signal, messages: [...new Set([welcome, entry])].filter(Boolean),
+    voice: entry?.voice ?? null,
     notificationId: filed ? content.caseId + ':reconciled' : null };
 }
 
@@ -28,52 +34,139 @@ export function createAssistantReceipt(storage, notificationId) {
   };
 }
 
-export function mountAI(root, store, content, { storage, aiState } = {}) {
+export function mountAI(root, store, content, { storage } = {}) {
   const receipt = createAssistantReceipt(storage, content.caseId + ':reconciled');
-  const notification = document.querySelector('#assistant-notification');
-  const announcement = document.querySelector('#assistant-announcement');
-  const windowEl = root.closest('.window');
-  const initialPortrait = aiState ? aiState.portraitFor(aiState.get()) : 'assets/placeholders/personnel.svg';
-  root.innerHTML = `<header class="ai-profile"><img class="ai-avatar" src="${initialPortrait}" alt="HILFER Assistant profile portrait" loading="eager" decoding="async"><div><h1>HILFER Assistant</h1><p>Internal support</p></div></header>
+  root.innerHTML = `<section id="assistant-balloon" class="assistant-balloon" aria-labelledby="assistant-title" hidden>
+    <header class="ai-profile"><h1 id="assistant-title">HILFER Assistant</h1><button type="button" data-assistant-dismiss aria-label="Dismiss Assistant">Close</button></header>
     <div class="ai-transcript" tabindex="-1" role="log" aria-label="Assistant correspondence" aria-live="polite" aria-relevant="additions"></div>
     <div class="ai-actions"><button data-open="reconciliation">Open Reconciliation</button><button data-open="records">Open Records</button></div>
-    <p class="ai-status" role="status"></p>`;
-  if (aiState) {
-    const avatar = root.querySelector('.ai-avatar');
-    function syncAvatar() { avatar.src = aiState.portraitFor(aiState.get()); }
-    // ai-state changes outside this module's control (e.g. the glitch-1 handler calling
-    // aiState.advance()); poll on the events that can plausibly follow a state change rather
-    // than adding a second independent subscription system.
-    window.addEventListener('hilfer:ai-state-changed', syncAvatar);
+    </section>
+    <div class="assistant-launch">
+      <button type="button" id="assistant-notification" class="assistant-notification" aria-controls="assistant-balloon" hidden>Report updated</button>
+      <button type="button" id="assistant-portrait" aria-label="HILFER Assistant" aria-controls="assistant-balloon" aria-expanded="false"><img class="ai-avatar" alt=""></button>
+    </div>
+    <span class="assistant-announcement" id="assistant-announcement" role="status" aria-live="polite"></span>`;
+  const notification = root.querySelector('#assistant-notification');
+  const announcement = root.querySelector('#assistant-announcement');
+  const launcher = root.querySelector('#assistant-portrait');
+  const balloon = root.querySelector('#assistant-balloon');
+  const log = root.querySelector('.ai-transcript');
+  const voice = createAssistantVoice(storage, content.caseId);
+  const deliveryKey = 'hilfer:assistant-delivery:v1';
+  const delivered = new Set();
+  try {
+    const saved = JSON.parse(storage?.getItem(deliveryKey) ?? 'null');
+    if (saved?.caseId === content.caseId && Array.isArray(saved.signals)) {
+      for (const signal of saved.signals) if (content.dialogue.some(entry => entry.on === signal)) delivered.add(signal);
+    }
+  } catch { /* Delivery still deduplicates in this session. */ }
+  const history = new Set();
+  let voiceCue = null;
+  let needsGesture = false;
+  function speakPending() {
+    if (!voiceCue || document.hidden) return;
+    if (navigator.userActivation?.hasBeenActive === false) { needsGesture = true; return; }
+    voice.play(voiceCue, {
+      onEnded: speakPending,
+      onError(error) {
+        needsGesture = error?.name === 'NotAllowedError';
+        if (!needsGesture) announcement.textContent = 'Voice unavailable.';
+      }
+    });
   }
+  const portrait = root.querySelector('.ai-avatar');
   let previousPhase;
   let wasUnread = false;
+  function renderHistory() {
+    log.innerHTML = [...history].map(message => `<section class="ai-message"><h2>${h(message.label)}</h2><p>${h(message.text)}</p></section>`).join('');
+    log.scrollTop = log.scrollHeight;
+  }
+  function deliver(signal) {
+    const entry = content.dialogue.find(message => message.on === signal);
+    if (!entry || delivered.has(signal)) return;
+    delivered.add(signal);
+    try {
+      storage?.setItem(deliveryKey, JSON.stringify({caseId:content.caseId, signals:[...delivered]}));
+    } catch { /* Delivery still deduplicates in this session. */ }
+    history.add(entry);
+    voiceCue = entry.voice ?? null;
+    renderHistory();
+    setOpen(true, false);
+    speakPending();
+  }
   function update() {
-    const model = deriveAssistant(store.getState(), store.getRecords(), content);
-    if (model.phase !== previousPhase) {
-      const log = root.querySelector('.ai-transcript');
-      log.innerHTML = model.messages.map(message => `<section class="ai-message"><h2>${h(message.label)}</h2><p>${h(message.text)}</p></section>`).join('');
-      log.scrollTop = log.scrollHeight;
-      root.querySelector('.ai-status').textContent = model.phase === 'filed' ? 'Report revision registered.' : 'Personnel review / pending';
+    const state = store.getState();
+    const model = deriveAssistant(state, store.getRecords(), content);
+    const face = state.distortionLevel > 0 ? 'assistant-distorted' : 'assistant';
+    const portraitSrc = `assets/arwa/portraits/${face}.webp`;
+    if (portrait.getAttribute('src') !== portraitSrc) portrait.src = portraitSrc;
+    if (model.phase !== previousPhase && (model.phase !== 'welcome' || !previousPhase)) {
+      if (!previousPhase) {
+        for (const signal of delivered) history.add(content.dialogue.find(message => message.on === signal));
+      }
+      for (const message of model.messages) history.add(message);
+      voiceCue = model.voice;
       previousPhase = model.phase;
+      renderHistory();
+      deliver(model.signal);
     }
-    if (model.notificationId && windowEl.classList.contains('active') && windowEl.classList.contains('visible')) receipt.markRead();
     const unread = Boolean(model.notificationId) && !receipt.isRead();
     notification.hidden = !unread;
     if (unread !== wasUnread) announcement.textContent = unread ? 'HILFER Assistant has a report update.' : '';
     wasUnread = unread;
   }
-  window.addEventListener('hilfer:window-activated', ({ detail }) => {
-    if (detail.windowId === 'ai') {
-      const focusCorrespondence = !windowEl.contains(document.activeElement);
+  function setOpen(open, focus = true) {
+    const justOpened = open && balloon.hidden;
+    balloon.hidden = !open;
+    if (open && (justOpened || focus)) balloon.toggleAttribute('data-passive', !focus);
+    launcher.setAttribute('aria-expanded', String(open));
+    update();
+    if (open && focus && previousPhase === 'filed') {
+      receipt.markRead();
       update();
-      if (focusCorrespondence) root.querySelector('.ai-transcript').focus({ preventScroll: true });
     }
+    if (justOpened && focus) speakPending();
+    if (open) log.scrollTop = log.scrollHeight;
+    if (focus) (open ? log : launcher).focus({preventScroll: true});
+  }
+  launcher.addEventListener('click', () => setOpen(balloon.hidden));
+  notification.addEventListener('click', () => setOpen(true));
+  root.querySelector('[data-assistant-dismiss]').addEventListener('click', () => setOpen(false));
+  root.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !balloon.hidden) {
+      event.stopPropagation();
+      setOpen(false);
+    }
+  });
+  root.querySelector('.ai-actions').addEventListener('click', event => {
+    if (event.target.closest('[data-open]')) setOpen(false);
+  });
+  window.addEventListener('hilfer:assistant-open', () => setOpen(true));
+  window.addEventListener('hilfer:assistant-dialogue', ({detail}) => deliver(detail?.signal));
+  function retryVoice(event) {
+    if (!event.isTrusted || !needsGesture) return;
+    needsGesture = false;
+    speakPending();
+  }
+  document.addEventListener('click', retryVoice, true);
+  document.addEventListener('keydown', retryVoice, true);
+  window.addEventListener('pagehide', voice.stop);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) voice.stop();
+    else if (!balloon.hidden) speakPending();
   });
   store.subscribe(update);
   store.onEvent(({ type }) => {
-    if (type === 'hilfer:progress-reset') { receipt.reset(); update(); }
+    if (type === 'hilfer:progress-reset') {
+      receipt.reset();
+      voice.reset();
+      delivered.clear();
+      history.clear();
+      previousPhase = undefined;
+      update();
+    }
     if (type === 'hilfer:case-reconciled') update();
   });
   update();
+  root.hidden = false;
 }

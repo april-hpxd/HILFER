@@ -28,7 +28,7 @@ test('fixed corpus matches every supplied value, five threads, twelve messages a
 
 test('folders and chronological ordering are real data projections; full text searches cross only authorized folders', () => {
   const model = createMailModel(corpus);
-  assert.deepEqual(model.getFolders().map(f=>[f.id,f.count,f.unread]), [['inbox',3,3],['sent',0,0],['archive',2,2]]);
+  assert.deepEqual(model.getFolders().map(f=>[f.id,f.count,f.unread]), [['inbox',3,3],['sent',0,0],['archive',2,2],['deleted',0,0]]);
   assert.equal(model.listThreads()[0].id,'THREAD-MEDICAL-ROUTING');
   assert.deepEqual(model.getThread('THREAD-DESK-HANDOFF').messages.map(m=>m.id), ['MAIL-001','MAIL-002','MAIL-003']);
   model.setFolder('sent'); assert.deepEqual(model.listThreads(),[]);
@@ -44,7 +44,7 @@ test('folders and chronological ordering are real data projections; full text se
 test('authorization precedes list, search, count, lookup, direct open, receipts and record references', () => {
   const storage = memory(); storage.setItem(MAIL_UI_KEY, JSON.stringify({version:1,readMessageIds:['SEALED-MESSAGE'],selectedThreadId:'SEALED-THREAD',folderId:'inbox'}));
   const model = createMailModel(fixture(),{storage});
-  assert.deepEqual(model.getFolders().map(f=>f.count), [3,0,2]);
+  assert.deepEqual(model.getFolders().map(f=>f.count), [3,0,2,0]);
   assert.equal(model.getThread('SEALED-THREAD'),null); assert.equal(model.getMessage('SEALED-MESSAGE'),null);
   assert.equal(model.getReference('SEALED-MESSAGE','SEALED-RECORD'),null);
   assert.deepEqual(model.openThread('SEALED-THREAD'), model.openThread('UNKNOWN'));
@@ -119,4 +119,51 @@ test('invalid IDs, references and timestamps fail validation; authored text is e
   const thread = structuredClone(corpus.threads[0]); thread.messages[0].body='<script>unsafe</script>\n\nExact spacing.';
   assert.match(renderMailThread(thread), /&lt;script&gt;unsafe&lt;\/script&gt;\n\nExact spacing\./);
   assert.doesNotMatch(renderMailThread(thread), /<script>/);
+});
+
+test('conversation previews, Sent overlap and whole-thread receipts follow the mailbox', () => {
+  const fixture = structuredClone(corpus);
+  const thread = fixture.threads.find(item => item.id === 'THREAD-ROSTER');
+  const outgoing = thread.messages[0];
+  outgoing.from = { id: 'desk', name: fixture.mailbox.displayName, address: fixture.mailbox.address };
+  const storage = memory();
+  const model = createMailModel(fixture, { storage });
+  const inbox = model.listThreads().find(item => item.id === thread.id);
+  assert.match(inbox.participants, /^me, /);
+  assert.equal(inbox.preview.id, 'MAIL-005');
+  model.setFolder('sent');
+  const [sent] = model.listThreads();
+  assert.equal(sent.id, thread.id);
+  assert.equal(sent.preview.id, outgoing.id);
+  assert.equal(sent.expandedId, outgoing.id);
+  assert.match(sent.participants, /^To: /);
+  model.selectThread(thread.id);
+  assert.deepEqual(model.getState().readMessageIds, []);
+  model.openThread(thread.id);
+  assert.deepEqual(model.getState().readMessageIds, ['MAIL-004', 'MAIL-005']);
+  assert.equal(model.getState().folderId, 'sent');
+  assert.equal(createMailModel(fixture, { storage }).getState().selectedThreadId, thread.id);
+  model.setQuery('HR-014');
+  const [result] = model.listThreads();
+  assert.equal(result.preview.id, 'MAIL-005');
+  assert.equal(result.expandedId, 'MAIL-004');
+  model.markUnread(thread.id);
+  assert.deepEqual(model.getState().readMessageIds, []);
+});
+
+test('Deleted Items is reversible, stays out of normal search, and resets', () => {
+  const storage = memory();
+  const model = createMailModel(corpus, {storage});
+  const id = 'THREAD-ROSTER';
+  assert.equal(model.setThreadDeleted('UNKNOWN', true), false);
+  assert.equal(model.setThreadDeleted(id, true), true);
+  model.setQuery('HR-014');
+  assert.deepEqual(model.listThreads(), []);
+  const saved = createMailModel(corpus, {storage});
+  saved.setFolder('deleted');
+  saved.setQuery('HR-014');
+  assert.equal(saved.listThreads()[0].id, id);
+  saved.reset();
+  assert.ok(saved.listThreads().some(thread => thread.id === id));
+  assert.equal(saved.getFolders().find(folder => folder.id === 'deleted').count, 0);
 });

@@ -8,7 +8,16 @@ From the repository root:
 
     python scripts/serve.py --port 8080
 
-Open http://127.0.0.1:8080. Node 18+ runs domain tests with `node --test` / `npm test`. Optional browser checks: `node tests/browser.check.js` with Playwright and Microsoft Edge installed. `HILFER_URL` defaults to localhost:8080, `HILFER_PLAYWRIGHT_MODULE` can specify the local Playwright package, and `HILFER_SCREENSHOT` controls the screenshot path.
+Open http://127.0.0.1:8080. The launcher binds to localhost and serves static files. Node 18+ runs the unit suites with `node --test` or `npm test`.
+
+For browser checks, keep the server running and install Playwright and Microsoft Edge in your test environment. Set `HILFER_PLAYWRIGHT_MODULE` to the absolute path to Playwright's `index.mjs` if it is installed outside the project. `HILFER_URL` defaults to `http://127.0.0.1:8080`.
+
+```sh
+node tests/browser.check.js
+node tests/assistant.browser.check.js
+node tests/mail.browser.check.js
+node tests/theme.browser.check.js
+```
 
 ## Player-facing flow
 
@@ -103,11 +112,11 @@ The original store still validates ID-based attachment and explicit submission; 
 
 `data/assistant.json` owns English correspondence for the configured case. `deriveAssistant(state, records, content)` in `js/apps/ai.js` projects welcome, investigating (relevant evidence discovered) and filed (committed resolution) phases. `mountAI` uses the existing store subscriptions/events; it never changes evidence, resolutions or progression. There is no LLM or Next-message sequence.
 
-The shell dispatches `hilfer:window-activated` on `window` with `{windowId}` when a window gains focus. Opening/activating `ai` acknowledges its visible update. The discrete taskbar notification remains available while unread, including after reload. Only a versioned UI receipt (`hilfer:assistant:v1`, `{version:1,readId}`) is persisted separately; it is not game state. Demo reset clears the receipt and derives the welcome phase again. Unavailable storage retains session behavior.
+The Assistant is docked above the taskbar. An unseen dialogue signal opens its balloon without taking focus. The portrait, report notification and shell shortcut also open it manually. The shell dispatches `hilfer:assistant-open` for those shortcuts. Opening the correspondence manually acknowledges the report update in `hilfer:assistant:v1`. Demo reset clears the receipts and delivers the welcome again. Unavailable storage retains session behavior.
 
 The existing `hilfer:case-reconciled` event plays the imported glitch cue at 20% volume for at most 1.5 seconds. The visual microglitch remains 650 ms. Reload/duplicate submissions do not emit another cue; reset/page exit stops playback. Rejected audio playback never interrupts filing or assistant notification.
 
-Checks: `node --test`, existing `node tests/browser.check.js`, and `node tests/assistant.browser.check.js` (same Playwright/Edge environment variables). The assistant check covers fresh play, contextual messages, actual audio start/stop, unread/read reloads, reset/replay, rejected audio, portrait variance, window controls and mobile notification access.
+Checks: `node --test`, existing `node tests/browser.check.js`, and `node tests/assistant.browser.check.js` (same Playwright/Edge environment variables). The assistant check covers fresh play, contextual messages, actual audio start/stop, unread/read reloads, reset/replay, rejected audio, portrait variance, balloon dismissal and focus, and mobile notification access.
 
 ## Graphite appearance
 
@@ -117,11 +126,14 @@ The desktop uses the pixelated HILFER logo by default. Display Properties still 
 
 ## HILFER Mail
 
-The fixed corpus is `data/emails.json`, copied without content changes from `hilfer_mail_demo_v1.json` (5 threads, 12 messages). [MAIL_CONTRACT.md](MAIL_CONTRACT.md) preserves the supplied contract. All message dates are provisional demo timestamps, not approved chronology; Inbox contains 3 conversations, Corporate Archive 2, and Sent Mail is intentionally empty. This is the authorized Reconciliation Desk mailbox/archive, not a personal account. No Compose, outgoing mail, attachments or new narrative messages are implemented.
+`data/emails.json` is the fixed demo corpus of five conversations and twelve messages. Inbox has three conversations, Archive has two, and Sent has no messages from Reconciliation Desk. All timestamps are provisional. See [MAIL_CONTRACT.md](MAIL_CONTRACT.md) for the original corpus contract.
 
-`js/apps/emails.js` exports `validateMailCorpus`, `createMailModel` and `mountMail`. The model defaults to the corpus's `initialGrants`; `requiredGrants` gates list/search/count/lookup/open/reference access before results are returned. `setGrants(grants)` is the future integration seam and clears unauthorized selection/receipts; no progression unlocks are invented. These are gameplay authorization rules in a static app, not a server-side confidentiality boundary for private data.
+`createMailModel` applies the configured grants before listing, searching, counting, opening or resolving a reference. `setGrants(grants)` updates those gameplay permissions and removes access to any now-restricted reader. The corpus is part of the static app bundle.
 
-`listMessages()`, `selectMessage(id)`, `openMessage(id)`, `setMessageRead(id,read)`, `getMessage(id)`, `getReference(messageId,recordId)`, `setFolder(id)`, `setQuery(text)`, `getFolders()`, `getState()` and `subscribe(fn)` own only Mail UI. The classic table has one row per authorized message, sorted newest first by the supplied local timestamp; search matches individual messages across authorized folders. Selection does not read a message; opening does. Legacy conversation APIs (`listThreads`, `getThread`, `openThread`, `markUnread`) remain for integration compatibility. Search, selection and rendering never call game discovery; only the supplied MAIL-004 reference navigates through existing `openRecord('HR-014')` and normal Records inspection. No OH-008 shortcut or finding is added to Mail.
+- `listThreads()` returns one row per authorized conversation, ordered by its latest applicable message. The row includes a preview. Search expands a matching message when the conversation opens. Sent derives membership from mail actually sent by Reconciliation Desk.
+- `selectThread(id)` selects without marking mail read. `openThread(id)` marks the whole conversation read. Each thread has one independent desktop window with dates, sender details and expandable messages. Readers can coexist, are not restored on reload, and close on demo reset or revoked access.
+- `setThreadDeleted(id, value)` moves or restores a thread locally. Deleted Items has its own search scope and is excluded from ordinary search. Restore returns the thread to its authored folder and any applicable Sent view.
+- `getReference(messageId, recordId)` resolves authorized references. MAIL-004 opens HR-014 through the existing Records API. Reading or moving mail does not change formal Reconciliation state.
 
 Read IDs/folder/selected thread and optional selected message ID persist under `hilfer:mail-ui:v1` with version 1, independently of game/Assistant saves. Invalid or inaccessible storage falls back to safe in-memory reading. `hilfer:progress-reset` clears Mail receipts, query and selection. Keyboard: arrows/Home/End select table rows or folders without reading; Enter opens the selected message, Ctrl+F focuses search, Escape closes a message or menu. Tab/Enter operate native menus, controls and Records links.
 
