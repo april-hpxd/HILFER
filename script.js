@@ -14,6 +14,10 @@ let selectedIcon = null;
 
 
 function openWindow(windowId) {
+    if (windowId === 'footage' && !isFootageUnlocked()) {
+        openWindow('access-restricted');
+        return;
+    }
     if (windowId === 'ai') {
         closeStartMenu();
         clearIconSelection();
@@ -134,6 +138,10 @@ function removeFromTaskbar(windowId) {
 }
 
 function toggleWindow(windowId) {
+    if (windowId === 'footage' && !isFootageUnlocked()) {
+        openWindow('footage');
+        return;
+    }
     const windowEl = document.getElementById(windowId + '-window');
     if (!windowEl) return;
 
@@ -145,8 +153,12 @@ function toggleWindow(windowId) {
     }
 }
 
+function isFootageUnlocked() {
+    return Boolean(window.hilfer?.getState?.().completedCaseIds?.includes('CASE-001'));
+}
+
 function getWindowTitle(windowId) {
-    const titles = { reconciliation: 'Reconciliation', records: 'Records', themes: 'Display Properties', ai: 'HILFER Assistant', emails: 'HILFER Mail' };
+    const titles = { reconciliation: 'Reconciliation', records: 'Records', reports: 'Reports', 'access-restricted': 'Access Restricted', themes: 'Display Properties', ai: 'HILFER Assistant', emails: 'HILFER Mail' };
     return titles[windowId] || document.getElementById(windowId + '-window')?.querySelector('.window-title')?.textContent || windowId;
 }
 

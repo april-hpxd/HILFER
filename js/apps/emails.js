@@ -217,9 +217,11 @@ function renderConversation(thread, expandedId) {
   }).join('');
 }
 
-export function mountMail(root, corpus, { storage, store, openRecord }) {
+const ERROR_WINDOWS_MESSAGE_ID = 'MAIL-010';
+
+export function mountMail(root, corpus, { storage, store, openRecord, glitch, onEmailGlitch, onErrorGlitch }) {
   const model = createMailModel(corpus, {storage,getRecord:store.getRecord});
-  const mailbox = model.getMailbox(), threadWindows = new Map();
+  const mailbox = model.getMailbox(), threadWindows = new Map(), glitchTimers = new Map();
   const action = (name,label,extra='') => `<button type="button" data-mail-command="${name}" ${extra}>${label}</button>`;
   const menu = (label,items) => `<details class="mail-menu"><summary>${label}</summary><div class="mail-menu-panel">${items}</div></details>`;
   root.innerHTML = `<nav class="mail-menubar" aria-label="Mail menus">
@@ -251,10 +253,44 @@ export function mountMail(root, corpus, { storage, store, openRecord }) {
     }
   }
   function closeThread(id) {
+    clearTimeout(glitchTimers.get(id));
+    glitchTimers.delete(id);
     const node = threadWindows.get(id); if (!node) return;
     threadWindows.delete(id); window.closeWindow(node.id.slice(0,-7)); node.remove();
   }
   const closeThreads = () => [...threadWindows.keys()].forEach(closeThread);
+  function closeScriptedDraft() {
+    const node = document.getElementById('mail-draft-window');
+    if (!node) return;
+    window.closeWindow('mail-draft');
+    node.remove();
+  }
+  function openScriptedDraft() {
+    closeScriptedDraft();
+    const width = Math.min(540, window.innerWidth - 24);
+    const height = Math.min(420, window.innerHeight - 80);
+    const node = document.createElement('section');
+    node.id = 'mail-draft-window';
+    node.className = 'window footage-interruption-draft';
+    node.setAttribute('aria-label', 'Unsent Mail draft');
+    Object.assign(node.style, {
+      width: width + 'px',
+      height: height + 'px',
+      left: Math.max(12, (window.innerWidth - width) / 2) + 'px',
+      top: Math.max(12, (window.innerHeight - height) / 2 - 18) + 'px'
+    });
+    node.innerHTML = `<div class="window-header"><span class="window-title">New Message — Unsent Draft</span><div class="window-controls"><button class="window-button close-btn" data-control="close" aria-label="Close unsent draft"></button></div></div>
+      <div class="window-content scripted-draft-content">
+        <p class="scripted-draft-notice">UNSENT DRAFT — NOT SENT OR SAVED</p>
+        <label>To: <input type="text" value="" placeholder="Unaddressed" readonly></label>
+        <label>Subject: <input type="text" value="" placeholder="No subject" readonly></label>
+        <label class="scripted-draft-message">Message: <textarea aria-label="Message body" readonly></textarea></label>
+        <p class="scripted-draft-status" role="status">Draft is not part of the mailbox.</p>
+      </div>`;
+    document.querySelector('#desktop').append(node);
+    window.openWindow('mail-draft');
+    return { node, textarea: node.querySelector('textarea') };
+  }
   function openThread(id) {
     const row = currentRows().find(thread => thread.id === id);
     if (!row || !model.openThread(id).ok) return;
@@ -284,6 +320,25 @@ export function mountMail(root, corpus, { storage, store, openRecord }) {
     const header = content.querySelector('.mail-thread-message[open] > summary');
     header?.scrollIntoView({block:'nearest'});
     (header ?? content).focus({preventScroll:true});
+    if (glitch) {
+      clearTimeout(glitchTimers.get(id));
+      glitchTimers.set(id, setTimeout(() => {
+        glitchTimers.delete(id);
+        if (node.isConnected && threadWindows.get(id) === node) {
+          const fired = glitch.triggerGlitch('email_multiplication', {
+            key: 'email_multiplication:first-open:v2',
+            payload: { sourceWindow: node }
+          });
+          if (fired) onEmailGlitch?.();
+          if (row.messages.some(message => message.id === ERROR_WINDOWS_MESSAGE_ID)) {
+            const errorFired = glitch.triggerGlitch('error_windows', {
+              key: 'error_windows:' + ERROR_WINDOWS_MESSAGE_ID + ':v2'
+            });
+            if (errorFired) onErrorGlitch?.();
+          }
+        }
+      }, 180));
+    }
     render();
   }
   function render() {
@@ -368,6 +423,7 @@ export function mountMail(root, corpus, { storage, store, openRecord }) {
   document.addEventListener('pointerdown',event=>{if(!root.querySelector('.mail-menubar').contains(event.target))root.querySelectorAll('.mail-menu[open]').forEach(menu=>menu.open=false);});
   window.addEventListener('hilfer:window-closed',({detail})=>{if([...threadWindows.values()].some(node=>node.id===detail.windowId+'-window')){render();if(root.closest('.window').classList.contains('active'))selectRow(model.getState().selectedThreadId);}});
   model.subscribe(render);
-  store.onEvent(({type})=>{if(type==='hilfer:progress-reset'){closeThreads();model.reset();}});
-  render();return model;
+  store.onEvent(({type})=>{if(type==='hilfer:progress-reset'){closeThreads();closeScriptedDraft();model.reset();}});
+  render();
+  return Object.assign(model, { openScriptedDraft, closeScriptedDraft });
 }

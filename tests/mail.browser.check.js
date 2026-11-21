@@ -34,7 +34,6 @@ try {
  await open(page, 'emails');
  assert.equal(await page.locator('[data-mail-row]').count(), 3);
  assert.equal(await page.locator('#mail-count').textContent(), '3 conversations (3 unread)');
- assert.equal(await page.locator('#progress, #integrity').count(), 0);
  assert.ok(await page.locator('.mail-toolbar button:visible').evaluateAll(buttons =>
    buttons.every(button => {
      const label = button.querySelector('span').getBoundingClientRect();
@@ -69,6 +68,14 @@ try {
  const rosterWindow = reader(page, roster.id);
  assert.ok(await rosterWindow.isVisible());
  assert.equal(await rosterWindow.locator('.window-title').textContent(), roster.subject);
+ await page.waitForTimeout(1300);
+ const mailEchoes = page.locator('.mail-message-window.glitch-window-echo');
+ assert.equal(await mailEchoes.count(), 9);
+ assert.ok(await mailEchoes.first().isVisible());
+ assert.equal(await mailEchoes.first().evaluate(el => getComputedStyle(el).opacity), '1');
+ assert.equal(await page.evaluate(() => hilfer.aiState.get()), 1);
+ assert.equal(await page.locator('.dead-pixel-field span').count(), 9);
+ assert.equal(await page.locator('.ai-avatar').getAttribute('src'), 'assets/arwa/ai_states/ai2.png');
  assert.deepEqual(await rosterWindow.locator('details[open]').evaluateAll(nodes => nodes.map(node => node.dataset.messageId)), ['MAIL-005']);
  assert.equal(await page.locator('#mail-count').textContent(), '3 conversations (2 unread)');
  const receipts = () => page.evaluate(() => JSON.parse(localStorage.getItem('hilfer:mail-ui:v1')).readMessageIds);
@@ -97,6 +104,10 @@ try {
    await page.locator('.mail-folders [data-mail-folder="' + thread.folderId + '"]').click();
    const node = await openThread(page, thread.id);
    assert.deepEqual(await node.locator('.mail-body').allTextContents(), thread.messages.map(message => message.body));
+   if (thread.messages.some(message => message.id === 'MAIL-010')) {
+     await page.waitForTimeout(1300);
+     assert.equal(await page.locator('.system-error-window').count(), 7);
+   }
    for (const sender of ['jessica', 'tito']) {
      if (!thread.messages.some(message => message.from.id === sender)) continue;
      const portrait = node.locator('img.mail-avatar[src$="' + sender + '-mail.webp"]').first();

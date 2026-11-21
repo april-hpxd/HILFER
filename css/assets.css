@@ -66,3 +66,4 @@
 
 [data-art="mail"] { background-image: var(--art-mail); }
 [data-art="footage"] { background-image: var(--art-footage); }
+[data-art="file"] { background-image: var(--art-file); }

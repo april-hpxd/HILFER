@@ -4,8 +4,8 @@ import { escapeHTML as h } from './shared.js';
 // layout) — see docs/INTEGRATION.md "Reports application". Static repository data; original
 // supplied files are rendered as-is (no OCR, rewriting or synthesized metadata).
 export const REPORT_ITEMS = [
-  { id: 'REPORT-001', title: 'Report 3', format: 'image', src: "assets/reports/3 (1).png" },
-  { id: 'REPORT-002', title: 'Report 4', format: 'image', src: "assets/reports/4 (1).png" }
+  { id: 'REPORT-001', title: 'Spacco', format: 'image', src: 'assets/reports/3 (1).png' },
+  { id: 'REPORT-002', title: 'Tim', format: 'image', src: 'assets/reports/4 (1).png' }
 ];
 
 export function mountReports(root) {
@@ -33,7 +33,7 @@ export function mountReports(root) {
   function renderViewer(item) {
     const header = '<h1>' + h(item.title) + '</h1><p class="report-id">' + h(item.id) + '</p>';
     if (item.format === 'image') {
-      return header + '<div class="report-scroll"><img class="report-image" src="' + h(item.src) + '" alt="' + h(item.title) + '"></div>';
+      return header + '<div class="report-scroll"><img class="report-image" src="' + h(item.src) + '" alt="Employee report for ' + h(item.title) + '"></div>';
     }
     if (item.format === 'text') {
       return header + '<pre class="report-text"></pre>';

@@ -34,7 +34,7 @@ export function createAssistantReceipt(storage, notificationId) {
   };
 }
 
-export function mountAI(root, store, content, { storage } = {}) {
+export function mountAI(root, store, content, { storage, aiState } = {}) {
   const receipt = createAssistantReceipt(storage, content.caseId + ':reconciled');
   root.innerHTML = `<section id="assistant-balloon" class="assistant-balloon" aria-labelledby="assistant-title" hidden>
     <header class="ai-profile"><h1 id="assistant-title">HILFER Assistant</h1><button type="button" data-assistant-dismiss aria-label="Dismiss Assistant">Close</button></header>
@@ -52,6 +52,8 @@ export function mountAI(root, store, content, { storage } = {}) {
   const balloon = root.querySelector('#assistant-balloon');
   const log = root.querySelector('.ai-transcript');
   const voice = createAssistantVoice(storage, content.caseId);
+  const portrait = root.querySelector('.ai-avatar');
+  let previousPortraitState = aiState?.get() ?? 0;
   const deliveryKey = 'hilfer:assistant-delivery:v1';
   const delivered = new Set();
   try {
@@ -74,7 +76,25 @@ export function mountAI(root, store, content, { storage } = {}) {
       }
     });
   }
-  const portrait = root.querySelector('.ai-avatar');
+  let portraitAnimationTimer;
+  function updateAiPortrait({ detail } = {}) {
+    if (!aiState) return;
+    const state = Number.isInteger(detail?.state) ? detail.state : aiState.get();
+    const source = aiState.portraitFor(state);
+    if (portrait.getAttribute('src') === source) return;
+    portrait.src = source;
+    portrait.classList.remove('assistant-state-glitch');
+    clearTimeout(portraitAnimationTimer);
+    if (state <= previousPortraitState) {
+      previousPortraitState = state;
+      return;
+    }
+    previousPortraitState = state;
+    void portrait.offsetWidth;
+    portrait.classList.add('assistant-state-glitch');
+    portraitAnimationTimer = setTimeout(() => portrait.classList.remove('assistant-state-glitch'), 720);
+  }
+  if (aiState) window.addEventListener('hilfer:ai-state-changed', updateAiPortrait);
   let previousPhase;
   let wasUnread = false;
   function renderHistory() {
@@ -97,9 +117,13 @@ export function mountAI(root, store, content, { storage } = {}) {
   function update() {
     const state = store.getState();
     const model = deriveAssistant(state, store.getRecords(), content);
-    const face = state.distortionLevel > 0 ? 'assistant-distorted' : 'assistant';
-    const portraitSrc = `assets/arwa/portraits/${face}.webp`;
-    if (portrait.getAttribute('src') !== portraitSrc) portrait.src = portraitSrc;
+    if (aiState) {
+      updateAiPortrait();
+    } else {
+      const face = state.distortionLevel > 0 ? 'assistant-distorted' : 'assistant';
+      const portraitSrc = `assets/arwa/portraits/${face}.webp`;
+      if (portrait.getAttribute('src') !== portraitSrc) portrait.src = portraitSrc;
+    }
     if (model.phase !== previousPhase && (model.phase !== 'welcome' || !previousPhase)) {
       if (!previousPhase) {
         for (const signal of delivered) history.add(content.dialogue.find(message => message.on === signal));

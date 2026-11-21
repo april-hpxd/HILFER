@@ -20,33 +20,85 @@ test('unknown glitch id is a no-op, not a throw', () => {
   assert.equal(glitch.triggerGlitch('does-not-exist'), false);
 });
 
-test('a once-guarded glitch key fires exactly once until reset', () => {
+test('a glitch that cannot render does not consume its once key', () => {
   const store = fakeStore();
   const storage = memoryStorage();
   const glitch = mountGlitchSystem(store, { storage });
-  // error_windows needs a DOM root to actually render; omit root and just check the guard logic
-  // by inspecting hasTriggered rather than relying on DOM side effects in this environment.
   assert.equal(glitch.hasTriggered('error_windows:MAIL-010'), false);
-  glitch.triggerGlitch('error_windows', { key: 'error_windows:MAIL-010' });
-  assert.equal(glitch.hasTriggered('error_windows:MAIL-010'), true);
-  const fired = glitch.triggerGlitch('error_windows', { key: 'error_windows:MAIL-010' });
-  assert.equal(fired, false, 'a second trigger with the same key must not fire again');
+  assert.equal(glitch.triggerGlitch('error_windows', { key: 'error_windows:MAIL-010' }), false);
+  assert.equal(glitch.hasTriggered('error_windows:MAIL-010'), false);
 });
 
 test('progress reset clears triggered glitches', () => {
   const store = fakeStore();
   const storage = memoryStorage();
-  const glitch = mountGlitchSystem(store, { storage });
-  glitch.triggerGlitch('error_windows', { key: 'error_windows:MAIL-010' });
-  assert.equal(glitch.hasTriggered('error_windows:MAIL-010'), true);
-  store.emit('hilfer:progress-reset', {});
-  assert.equal(glitch.hasTriggered('error_windows:MAIL-010'), false);
+  const originalDocument = global.document;
+  const originalRAF = global.requestAnimationFrame;
+  global.document = { createElement: () => fakeElement() };
+  global.requestAnimationFrame = fn => fn();
+  try {
+    const glitch = mountGlitchSystem(store, { storage, root: { appendChild() {} } });
+    glitch.triggerGlitch('error_windows', { key: 'error_windows:MAIL-010' });
+    assert.equal(glitch.hasTriggered('error_windows:MAIL-010'), true);
+    store.emit('hilfer:progress-reset', {});
+    assert.equal(glitch.hasTriggered('error_windows:MAIL-010'), false);
+    glitch.resetGlitches();
+  } finally {
+    global.document = originalDocument;
+    global.requestAnimationFrame = originalRAF;
+  }
 });
 
 test('malformed glitch save storage degrades gracefully instead of throwing', () => {
   const storage = { getItem: () => '{not json', setItem: () => {} };
   const glitch = mountGlitchSystem(fakeStore(), { storage });
   assert.equal(glitch.hasTriggered('anything'), false);
+});
+
+test('dead pixels accumulate with AI distortion and reset to zero', () => {
+  const desktop = {
+    id: 'desktop',
+    classList: fakeClassList(),
+    appendChild() {},
+    closest() { return desktop; },
+    remove() {}
+  };
+  const children = [];
+  desktop.appendChild = child => children.push(child);
+  const originalDocument = global.document;
+  const originalWindow = global.window;
+  const listeners = new Map();
+  global.document = {
+    documentElement: { dataset: { aiState: '0' } },
+    createElement: () => {
+      const element = fakeElement();
+      element.remove = () => {
+        const index = children.indexOf(element);
+        if (index >= 0) children.splice(index, 1);
+      };
+      return element;
+    }
+  };
+  global.window = { addEventListener: (name, fn) => listeners.set(name, fn) };
+  try {
+    const glitch = mountGlitchSystem(fakeStore(), { storage: memoryStorage(), root: desktop });
+    listeners.get('hilfer:ai-state-changed')({ detail: { state: 2 } });
+    const field = children.find(child => child.className === 'dead-pixel-field');
+    assert.ok(field);
+    assert.equal(field.children.length, 18);
+    assert.equal(field.children.filter(pixel => pixel.dataset.deadPixel === 'black').length, 5);
+    assert.equal(field.children.filter(pixel => pixel.dataset.deadPixel === 'rgb').length, 13);
+    assert.ok(field.children.filter(pixel => pixel.dataset.deadPixel === 'rgb').every(pixel =>
+      ['#ff3158', '#18ee79', '#397dff'].includes(pixel.style.backgroundColor)
+    ));
+    listeners.get('hilfer:ai-state-changed')({ detail: { state: 4 } });
+    assert.equal(children.find(child => child.className === 'dead-pixel-field').children.length, 36);
+    glitch.resetGlitches();
+    assert.equal(children.some(child => child.className === 'dead-pixel-field'), false);
+  } finally {
+    global.document = originalDocument;
+    global.window = originalWindow;
+  }
 });
 
 // Regression: `cancel(id)` must replay the PREVIOUS invocation's cleanup BEFORE the new one
@@ -66,6 +118,7 @@ function fakeElement() {
   return {
     classList: fakeClassList(),
     style: {},
+    dataset: {},
     inert: false,
     setAttribute() {},
     querySelector: () => null,

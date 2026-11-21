@@ -12,7 +12,7 @@
 
 ## Fixed scope
 - HILFER Mail is an authorized shared Reconciliation Desk mailbox plus Corporate Archive, not a private email account and not a hacking activity.
-- Functional `Inbox`, `Sent Mail` and `Corporate Archive`, with `Sent Mail` empty in this demo but structurally real for the future communications-gateway finale. No Compose or arbitrary outgoing mail yet.
+- Functional `Inbox`, `Sent Mail` and `Corporate Archive`, with `Sent Mail` empty in this demo but structurally real for the future communications-gateway finale. No user-initiated Compose or arbitrary outgoing mail. A separate, unapproved post-footage prototype may show a temporary scripted **unsent** draft; it must not enter the corpus, Sent Mail, UI storage, or provide a Send action.
 - Thread and message views; sender/recipients/CC, date, subject, text body; full-text/sender/subject/record-ID search *only among authorized messages*; read/unread receipts; responsive window and keyboard controls.
 - One cross-app reference: HR-014 in MAIL-004 opens existing `openRecord('HR-014')` in Records. No direct OH-008 jump; do not reveal supported Jessica resolution through Email.
 - The five thread narratives are not all hints: Jessica/Tito threads primarily humanize people. Avoid indicators that tell users which conversation contains a solution.

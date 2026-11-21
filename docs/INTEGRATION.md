@@ -137,7 +137,7 @@ The desktop uses the pixelated HILFER logo by default. Display Properties still 
 
 Read IDs/folder/selected thread and optional selected message ID persist under `hilfer:mail-ui:v1` with version 1, independently of game/Assistant saves. Invalid or inaccessible storage falls back to safe in-memory reading. `hilfer:progress-reset` clears Mail receipts, query and selection. Keyboard: arrows/Home/End select table rows or folders without reading; Enter opens the selected message, Ctrl+F focuses search, Escape closes a message or menu. Tab/Enter operate native menus, controls and Records links.
 
-Checks: `node --test` includes fixed-corpus hash, reference/anchor validation, sorting, access denial/direct lookups/counts, revoked grants, receipt persistence/reset/blocked storage and game-state separation. `node tests/mail.browser.check.js` verifies all 12 exact bodies and metadata, five conversations, empty Sent, search, HR-014 navigation and Jessica, reload/reset, restricted fixture, keyboard/mobile/Graphite, malformed/blocked receipts and window controls.
+Checks: `node --test` includes fixed-corpus hash, reference/anchor validation, sorting, access denial/direct lookups/counts, revoked grants, receipt persistence/reset/blocked storage and game-state separation. `node tests/mail.browser.check.js` verifies all 12 exact bodies and metadata, five conversations, empty Sent, search, HR-014 navigation and Jessica, reload/reset, restricted fixture, keyboard/mobile/Graphite, malformed/blocked receipts and window controls. `node tests/glitch.browser.check.js` covers visible Mail echoes, MAIL-010 dialogs, first-case glitch replay, and the unapproved post-footage draft prototype.
 
 The standard-library static launcher `scripts/serve.py` (also `npm start`) uses a larger connection accept queue. Default Python HTTP-server backlog intermittently refused simultaneous startup asset requests on this Windows host; five cold boots passed with the increased queue. It serves only static files from the repository, binds localhost and adds no runtime backend or dependency.
 
@@ -145,8 +145,8 @@ The standard-library static launcher `scripts/serve.py` (also `npm start`) uses 
 
 `js/effects/glitch-system.js` exports `mountGlitchSystem(store, {storage, root, sounds})`,
 returning `{triggerGlitch(id, {key, payload, once}), hasTriggered, resetGlitches}`. Each
-glitch is a scripted visual sequence with a defined duration, an associated sound, and a
-cleanup; none mutates evidence, resolutions, case or Mail state. "Already triggered" flags
+glitch is a scripted visual sequence with cleanup; sounds are included where appropriate.
+None mutates evidence, resolutions, case, or the Mail corpus/read-receipt model. "Already triggered" flags
 are stored separately from gameplay progress under `hilfer:glitches:v1` (`{version,
 triggered}`), following the same pattern as the Assistant's own UI receipt. Malformed or
 unavailable storage degrades to in-session-only behavior, like the rest of the shell.
@@ -155,11 +155,10 @@ unavailable storage degrades to in-session-only behavior, like the rest of the s
 Registered glitches: `desktop_distortion` (first glitch — see below), `email_multiplication`
 (visual duplicate windows, triggered on the first opened Mail message in `js/apps/emails.js`) and
 `error_windows` (a cascading, then rapidly self-closing, stack of system-error dialogs, with
-its own error sound). All only ever create transient DOM elements appended to `#desktop` with
-`inert` set where applicable (`desktop_distortion`'s overlay element, plus the echo/dialog
-windows of the other two); none are registered with `script.js`'s window manager (no taskbar
-entry, no real window ID, no focus/z-index persistence), so they cannot corrupt real window or
-Mail state.
+its own error sound). These three effects create transient DOM layers on `#desktop`; the Mail
+echoes/dialogs are `inert` and are not registered with `script.js`'s window manager. The
+separate, unapproved `footage_interruption` is described below; its temporary draft is a real
+shell window so it can be closed normally, but it does not enter the Mail model or persist.
 
 **`email_multiplication` triggers on the first opened Mail message**, regardless of folder;
 this makes the second glitch visible during normal inbox use. **`error_windows` remains tied to
@@ -168,16 +167,38 @@ copies or transient system-error dialogs appear, play their supplied sounds, and
 themselves up. The actual Mail reader remains usable afterward. These are scoped presentation
 events, not new investigation mechanics.
 
+The Mail and first-case glitch keys use versioned milestone IDs so this restored presentation
+can run once for players whose older saved UI state already recorded a prior attempt. A glitch
+does not consume its one-time key unless it can actually mount its visual effect. Reset Demo
+Progress clears those keys and allows the first-case sequence to play again.
+
+The dead-pixel overlay is an **unapproved visual experiment**, not narrative canon or a
+confirmed radiation effect. It currently scales with the separate AI/wallpaper presentation
+state, adding nine decorative pixels per stage (a mix of black and red/green/blue pixels) over
+the desktop. The field clears on reset and is deliberately not tied to clicks or radiation.
+Keep it visually unobtrusive and remove it if the team does not approve the treatment.
+
+The user-requested post-footage reaction is an **unapproved narrative prototype**. Only the
+video's natural `ended` event triggers it (not pause or closing Footage). A simulated in-game
+cursor—not the user's OS pointer—closes Footage, opens Mail, and types
+`YOU WERE NOT SUPPOSED TO SEE THAT` into a temporary read-only draft. The real browser pointer
+is hidden while the simulated cursor is active, then restored as soon as typing finishes (or
+if the sequence is closed or reset). The scripted cursor is removed at completion. The draft
+is explicitly unsent, has no send action, is not added to the mailbox or
+storage, and is removed by Reset Demo Progress. The experiment is intended to make the
+workstation feel as though it is suppressing an observed discovery; its one-time completion
+advances the shared visual AI/wallpaper state, but it does not change case progress or evidence.
+Team approval and its place in the final pacing remain open.
+
 **`desktop_distortion` (first glitch) — re-added.** A previous iteration of this glitch was
 reverted at the user's request back to the plain `html.microglitch` flourish in
 `js/effects/distortion.js`. The 2026 "Final Glitch Fixes" request explicitly asked for this
 glitch back, considerably more visual, and fixed the white-screen bug the old prototype left
-behind — see "White-screen root cause" below. `html.microglitch` itself is untouched and keeps
-firing its own brief shake on every `hilfer:case-reconciled` (not just the first); the two are
-independent and visually layer rather than conflict.
+behind — see "White-screen root cause" below. `html.microglitch` still provides a brief shake
+on each `hilfer:case-reconciled`, but yields to the stronger sequence when both start together.
 
-`desktop_distortion` triggers once, the first time `completedCaseIds.length` reaches 1 (wired
-in `js/main.js`). It appends a `.desktop-glitch-overlay` div to `#desktop` and toggles
+`desktop_distortion` triggers once when the first playable case is complete (wired in
+`js/main.js`). It appends a `.desktop-glitch-overlay` div to `#desktop` and toggles
 `.desktop-glitch-active` on `#desktop`, driving a five-stage, ~3.4s CSS animation
 (`css/hilfer.css`: `desktopGlitchShift`/`Overlay`/`Jitter` keyframes) — normal completion, an
 initial small-scale RGB/offset disruption, a stronger escalation burst, a quiet beat where the
@@ -202,10 +223,13 @@ namespaced key separate from gameplay saves) drives both the AI assistant's port
 (`js/apps/ai.js`, via `aiState.portraitFor(state)`) and the desktop wallpaper (written to the
 `--wallpaper-clean` CSS custom property on `:root`), so the two can never desync. Setting the
 state dispatches `window` event `hilfer:ai-state-changed`, which `ai.js` listens for directly to
-refresh its `<img>` — no separate polling state machine. The two recurring authored milestones
-(first case completion and the first opened Mail message) each skip one intermediate asset
-(`advance(2)`), producing display stages 1 → 3 → 5. Their order is independent; the state
-controller clamps at the last available portrait/wallpaper pair.
+refresh its `<img>` and briefly animate the portrait — no separate polling state machine. Each
+meaningful milestone advances one stage: the first-case glitch midpoint, first Mail echo,
+`MAIL-010` error sequence, and first completed Footage clip. These milestones can occur in
+different orders; progression is cumulative, clamped at the final portrait/wallpaper pair, and
+reset only with Reset Demo Progress. The portrait and wallpaper both use the same stage index.
+A brief glitch cue accompanies a stage change unless another glitch/error cue is already
+playing, avoiding redundant overlapping sounds.
 
 `AI_PORTRAITS` / `WALLPAPERS` in that module list the actual supplied files found under
 `assets/arwa/ai_states/` (`ai1.png`, `ai2.png`, `3.png`, `4.png`, `7.png`) and
@@ -213,44 +237,38 @@ controller clamps at the last available portrait/wallpaper pair.
 array lengths line up 1:1 with the AI-portrait array). The filenames carry no explicit ordering
 contract from Arwa; state 0 → 4 is an editorial choice (ai1 "nominal" → ai2 → 3 → 4 → 7
 "most distorted") recorded here so it can be corrected in one place if the intended order
-differs. The first-case `desktop_distortion` advances the shared state at its midpoint, and the
-first Mail-message opening advances it when the email multiplication glitch fires. These are
-meaningful milestones, not arbitrary UI interactions; state does not reset when closing the
-Assistant window. A reload reapplies the saved state to both portrait and wallpaper, and
-`hilfer:progress-reset` resets it to state 0. Reset Demo Progress also clears the session-only
-logo style override so the pixelated logo default is restored.
+differs. AI-state and pixel changes are visual presentation only, not a confirmed story mechanic.
+State does not reset when closing the Assistant window. A reload reapplies the saved state to
+both portrait and wallpaper, and `hilfer:progress-reset` resets it to state 0. Reset Demo
+Progress also clears the session-only logo style override so the pixelated logo default is
+restored.
 
 ## Footage application
 
-`js/apps/footage.js` exports `mountFootage(root)`, mounted onto `#footage-app` inside the
-`#footage-window` section in `index.html` (window id `footage`, already present in
-`script.js`'s `applicationTitles`/desktop icon, previously falling back to an auto-generated
-placeholder window because no real markup or app existed yet). `FOOTAGE_ITEMS` is a plain
-array of `{id, title, description, src, staticSrc}`; add entries there for future footage, no
-other code changes required. Only `assets/footage/first hald draft.mov` currently exists and is
-used (there is no second clip — do not add placeholder entries for footage that doesn't
-exist). The player is a native `<video>` with custom play/pause, seek, time, volume and
-fullscreen controls, reusing Reconciliation's `.app-toolbar` / `.reconciliation-tabs` /
-`.case-list` / `.case-detail` classes for visual consistency rather than introducing new chrome.
-`assets/sounds/static-humming.wav` plays (looped) only while the video is actually playing —
-started on the video's `play` event, stopped on `pause`/`ended`/window-close/`pagehide` — never
-on merely opening the app. Browser autoplay restrictions are handled by starting the static
-track from the same `play` event the user's own Play-button click produces, so it has a user
-gesture to piggyback on.
+The active shell uses the native `<video controls>` inside `#footage-window` in `index.html`,
+with `assets/footage/preview.mp4` as its source. Until the first playable case is complete,
+clicking either Footage launcher opens `#access-restricted-window` with
+`assets/arwa/warnings/access_restricted.png`; the image's close and Cancel controls are
+clickable overlays. `openWindow('footage')` routes locked access to this warning rather than the
+video. After the case is filed, the same launchers open the video. Reset Demo Progress closes
+Footage and restores the restriction. `js/main.js` pauses the video when its window closes or
+the demo resets, and reports a load error in the status bar. `js/apps/footage.js` is a separate
+player implementation and is not mounted by the current shell entry point.
+
+The prototype post-view interruption listens to the shell's static Footage video's native
+`ended` event. It does not fire when the clip is paused or its window is closed. See the
+unapproved-behavior note in "Glitch system"; the temporary unsent draft is presentation only,
+not part of the Mail model or message corpus.
 
 ## Reports application
 
 `js/apps/reports.js` exports `mountReports(root)`, mounted onto `#reports-app` inside the
-`#reports-window` section (window id `reports`, same previously-placeholder situation as
-Footage). `REPORT_ITEMS` lists the two files actually found in `assets/reports/` (`3 (1).png`,
-`4 (1).png`) as `format: 'image'`; the viewer renders them with `<img>` at native resolution
-inside a scrollable pane, original files untouched, no added/invented metadata or OCR text.
-`assets/arwa/reports/report_spacco.png` / `report_tim.png` are a separate, unrelated-looking
-pair (likely UI reference art rather than sample case reports) and were **not** added to
-`REPORT_ITEMS` — flag this to Arwa/the team if they were meant to appear here too. A `format:
-'text'` case is scaffolded in `renderViewer` for a plain-text report if one is added later;
-anything else falls back to an explicit "not yet supported" message rather than silently
-omitting the file.
+`#reports-window` section and reachable from the Reports desktop icon. `REPORT_ITEMS` lists
+the two supplied images in `assets/reports/` as Spacco (`3 (1).png`) and Tim (`4 (1).png`) with
+stable IDs. The viewer renders them as-is inside a scrollable pane, without OCR, rewriting, or
+invented report metadata. A `format: 'text'` case is scaffolded in `renderViewer` for a
+plain-text report if one is added later; anything else falls back to an explicit "not yet
+supported" message rather than silently omitting the file.
 
 ## Custom cursors
 

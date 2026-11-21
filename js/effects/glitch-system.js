@@ -4,7 +4,8 @@
 // Glitch 1 (`desktop_distortion`) is the one-time, desktop-wide distortion on first-case
 // completion; it also advances the shared AI-state/wallpaper (js/effects/ai-state.js) partway
 // through its sequence so the portrait + wallpaper swap lands mid-glitch, not before/after it.
-// Glitches 2 and 3 (`email_multiplication`, `error_windows`) are unchanged.
+// Mail echoes/errors remain transient visual layers; the unapproved footage interruption
+// adds a separate simulated cursor and temporary, unsent draft window.
 export const GLITCH_SAVE_KEY = 'hilfer:glitches:v1';
 
 function loadGlitchSave(storage) {
@@ -34,6 +35,43 @@ function playOnce(audio, { volume = 0.25, duration } = {}) {
 export function mountGlitchSystem(store, { storage, root, sounds = {} } = {}) {
   let data = loadGlitchSave(storage);
   const activeCleanups = new Map();
+  let deadPixelField = null;
+
+  function updateDeadPixels(level) {
+    const count = Math.max(0, Math.min(4, Number(level) || 0));
+    if (deadPixelField) deadPixelField.remove();
+    deadPixelField = null;
+    if (!root || count === 0) return;
+    deadPixelField = document.createElement('div');
+    deadPixelField.className = 'dead-pixel-field';
+    deadPixelField.setAttribute('aria-hidden', 'true');
+    const pixelCount = count * 9;
+    for (let index = 0; index < pixelCount; index += 1) {
+      const pixel = document.createElement('span');
+      const x = (index * 47 + count * 31) % 97;
+      const y = (index * 73 + count * 19) % 96;
+      const size = 1 + ((index + count) % 3);
+      pixel.style.left = x + '%';
+      pixel.style.top = y + '%';
+      pixel.style.width = size + 'px';
+      pixel.style.height = size + 'px';
+      const isBlack = index % 4 === 0;
+      const colors = ['#ff3158', '#18ee79', '#397dff'];
+      const color = isBlack ? '#050505' : colors[index % colors.length];
+      pixel.dataset.deadPixel = isBlack ? 'black' : 'rgb';
+      pixel.style.backgroundColor = color;
+      pixel.style.color = color;
+      deadPixelField.appendChild(pixel);
+    }
+    root.appendChild(deadPixelField);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('hilfer:ai-state-changed', event => {
+      updateDeadPixels(event.detail?.state ?? 0);
+    });
+  }
+  updateDeadPixels(typeof document !== 'undefined' ? document.documentElement?.dataset?.aiState ?? 0 : 0);
 
   function persist() { saveGlitchSave(storage, data); }
   function hasTriggered(id) { return data.triggered.includes(id); }
@@ -52,10 +90,10 @@ export function mountGlitchSystem(store, { storage, root, sounds = {} } = {}) {
   // CSS sequence briefly settles ("quiet beat") before escalating again — so the asset swap
   // itself is not masked by heavy distortion, while the glitch continues around it.
   function triggerDesktopDistortion({ onMidpoint } = {}) {
-    if (!root) return;
+    if (!root) return false;
     cancel('desktop-distortion');
     const desktop = root.id === 'desktop' ? root : root.closest('#desktop');
-    if (!desktop) return;
+    if (!desktop) return false;
     const overlay = document.createElement('div');
     overlay.className = 'desktop-glitch-overlay';
     overlay.setAttribute('aria-hidden', 'true');
@@ -69,13 +107,14 @@ export function mountGlitchSystem(store, { storage, root, sounds = {} } = {}) {
     }
     timers.push(setTimeout(cleanup, 3500));
     register('desktop-distortion', () => { timers.forEach(clearTimeout); cleanup(); });
+    return true;
   }
 
   // --- Glitch 2: email window multiplication ---------------------------------------------
   // Spawns short-lived visual echoes only; no real window IDs are registered with the
   // shell's window manager, so focus/taskbar/z-index/persistence are all untouched.
   function triggerEmailMultiplication({ sourceWindow, count = 9 } = {}) {
-    if (!root || !sourceWindow) return;
+    if (!root || !sourceWindow) return false;
     cancel('email-multiplication');
     const stopSound = playOnce(sounds.staticHum, { volume: 0.22, duration: 2600 });
     const echoes = [];
@@ -118,11 +157,12 @@ export function mountGlitchSystem(store, { storage, root, sounds = {} } = {}) {
     const finalTimer = setTimeout(() => { echoes.forEach(echo => echo.remove()); stopSound(); }, 5000);
     timers.push(finalTimer);
     register('email-multiplication', () => { timers.forEach(clearTimeout); clearInterval(spawnInterval); echoes.forEach(echo => echo.remove()); stopSound(); });
+    return true;
   }
 
   // --- Glitch 3: error windows opening, then forcibly closed ------------------------------
   function triggerErrorWindows({ count = 7 } = {}) {
-    if (!root) return;
+    if (!root) return false;
     cancel('error-windows');
     // Audible for the whole open-then-close sequence (~3.2s total), not just the opening burst.
     const stopSound = playOnce(sounds.error, { volume: 0.45, duration: 3200 });
@@ -161,12 +201,143 @@ export function mountGlitchSystem(store, { storage, root, sounds = {} } = {}) {
     const finalTimer = setTimeout(() => { dialogs.forEach(dialog => dialog.remove()); stopSound(); }, 3200);
     timers.push(finalTimer);
     register('error-windows', () => { timers.forEach(clearTimeout); clearInterval(spawnInterval); dialogs.forEach(dialog => dialog.remove()); stopSound(); });
+    return true;
+  }
+
+  function triggerFootageInterruption({
+    footageWindow,
+    onCloseFootage,
+    onOpenMail,
+    createDraft,
+    closeDraft,
+    message = 'YOU WERE NOT SUPPOSED TO SEE THAT'
+  } = {}) {
+    if (!root || !footageWindow ||
+        typeof onCloseFootage !== 'function' ||
+        typeof onOpenMail !== 'function' ||
+        typeof createDraft !== 'function' ||
+        typeof closeDraft !== 'function' ||
+        typeof message !== 'string' || !message.length) return false;
+    cancel('footage-interruption');
+    let stopSound = () => {};
+    const cursor = document.createElement('img');
+    cursor.className = 'footage-scripted-cursor';
+    cursor.src = 'assets/arwa/cursor-small.png';
+    cursor.alt = '';
+    cursor.setAttribute('aria-hidden', 'true');
+    const timers = new Set();
+    let draft;
+    let cancelled = false;
+    function onWindowClosed({ detail }) {
+      if (detail.windowId === 'mail-draft') cleanup();
+    }
+    const rootRect = root.getBoundingClientRect();
+    function pointFor(element) {
+      const rect = element.getBoundingClientRect();
+      return {
+        x: rect.left - rootRect.left + rect.width / 2,
+        y: rect.top - rootRect.top + rect.height / 2
+      };
+    }
+    function moveTo(element, next) {
+      if (!element?.isConnected) {
+        console.error('Footage interruption target is unavailable.');
+        cleanup();
+        return;
+      }
+      const point = pointFor(element);
+      cursor.style.left = point.x + 'px';
+      cursor.style.top = point.y + 'px';
+      schedule(next, 620);
+    }
+    function schedule(callback, delay) {
+      const timer = setTimeout(() => {
+        timers.delete(timer);
+        if (!cancelled) callback();
+      }, delay);
+      timers.add(timer);
+    }
+    function cleanup() {
+      if (cancelled) return;
+      cancelled = true;
+      timers.forEach(clearTimeout);
+      timers.clear();
+      cursor.remove();
+      document.documentElement.classList.remove('scripted-cursor-active');
+      stopSound();
+      window.removeEventListener('hilfer:window-closed', onWindowClosed);
+      if (draft?.node?.isConnected && draft.node.classList.contains('visible')) closeDraft?.();
+    }
+    function closeFootage() {
+      try { onCloseFootage(); }
+      catch (error) {
+        console.error('Could not close the Footage window for its scripted interruption.', error);
+        cleanup();
+        return;
+      }
+      const mailIcon = document.querySelector('.desktop-icons [data-open="emails"]');
+      moveTo(mailIcon, () => {
+        try { onOpenMail(); }
+        catch (error) {
+          console.error('Could not open Mail for its scripted interruption.', error);
+          cleanup();
+          return;
+        }
+        try { draft = createDraft(); }
+        catch (error) {
+          console.error('Could not create the scripted unsent Mail draft.', error);
+          cleanup();
+          return;
+        }
+        if (!draft?.node?.isConnected || !draft.textarea?.isConnected) {
+          console.error('The scripted unsent Mail draft did not provide its message field.');
+          cleanup();
+          return;
+        }
+        moveTo(draft.textarea, () => typeNext(0));
+      });
+    }
+    function typeNext(index) {
+      if (!draft?.node?.isConnected || !draft.textarea.isConnected) {
+        cleanup();
+        return;
+      }
+      if (index >= message.length) {
+        draft.textarea.setSelectionRange(message.length, message.length);
+        draft.node.dataset.scriptedTyping = 'complete';
+        draft.node.querySelector('.scripted-draft-status').textContent = 'Text entered. Draft remains unsent.';
+        cursor.remove();
+        document.documentElement.classList.remove('scripted-cursor-active');
+        stopSound();
+        return;
+      }
+      draft.textarea.value = message.slice(0, index + 1);
+      draft.textarea.dispatchEvent(new Event('input', { bubbles: true }));
+      schedule(() => typeNext(index + 1), 140);
+    }
+    const video = footageWindow.querySelector('video');
+    const closeButton = footageWindow.querySelector('[data-control="close"]');
+    if (!video || !closeButton || !document.querySelector('.desktop-icons [data-open="emails"]')) return false;
+    stopSound = playOnce(sounds.glitch, { volume: 0.2, duration: 1500 });
+    const start = pointFor(video);
+    cursor.style.left = start.x + 'px';
+    cursor.style.top = start.y + 'px';
+    document.documentElement.classList.add('scripted-cursor-active');
+    root.appendChild(cursor);
+    window.addEventListener('hilfer:window-closed', onWindowClosed);
+    requestAnimationFrame(() => {
+      cursor.classList.add('footage-scripted-cursor-visible');
+      schedule(() => moveTo(closeButton, closeFootage), 100);
+    });
+    register('footage-interruption', cleanup);
+    return true;
   }
 
   const definitions = {
     desktop_distortion: triggerDesktopDistortion,
     email_multiplication: triggerEmailMultiplication,
-    error_windows: triggerErrorWindows
+    error_windows: triggerErrorWindows,
+    footage_interruption: triggerFootageInterruption
   };
 
   // `key` distinguishes repeatable instances of the same glitch (e.g. one per email id);
@@ -175,14 +346,16 @@ export function mountGlitchSystem(store, { storage, root, sounds = {} } = {}) {
     const handler = definitions[id];
     if (!handler) { console.warn(`Unknown glitch "${id}".`); return false; }
     if (once && hasTriggered(key)) return false;
+    if (handler(payload) === false) return false;
     if (once) markTriggered(key);
-    handler(payload);
     return true;
   }
 
   function resetGlitches() {
     for (const cleanup of activeCleanups.values()) cleanup();
     activeCleanups.clear();
+    if (deadPixelField) deadPixelField.remove();
+    deadPixelField = null;
     data = { version: 1, triggered: [] };
     persist();
   }

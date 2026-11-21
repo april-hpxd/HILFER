@@ -47,6 +47,7 @@
 .desktop-icons .icon { width: 80px; }
 .desktop-brand { inset: 0; display: grid; place-content: center; opacity: .78; transform: none; text-shadow: none; }
 .desktop-logo { display: block; width: clamp(190px, 24vw, 300px); aspect-ratio: 1; background-position: center; background-size: contain; background-repeat: no-repeat; mix-blend-mode: multiply; }
+.desktop-build { position: absolute; top: 32px; left: 3.8%; z-index: 1; color: #352829; font: 14px/1.2 Tahoma, sans-serif; letter-spacing: 1px; white-space: nowrap; }
 .icon-image { width: 32px; height: 32px; background-size: contain; background-position: center; background-repeat: no-repeat; image-rendering: pixelated; background-color: transparent; border: 0; box-shadow: none; }
 .icon-text { color: #402d2e; text-shadow: 0 1px #ffe8e4; }
 .icon:hover, .icon:focus-visible { background: #ffffff40; border-color: #743f43; }

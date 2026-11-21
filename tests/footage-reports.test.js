@@ -28,3 +28,8 @@ test('REPORT_ITEMS covers every file actually present in assets/reports', () => 
   const files = readdirSync(path.join(root, 'assets/reports'));
   assert.equal(files.length, REPORT_ITEMS.length, 'no report file should be silently omitted, and no invented report should be listed');
 });
+
+test('the supplied report images are identified as Spacco and Tim', () => {
+  assert.deepEqual(REPORT_ITEMS.map(({title}) => title), ['Spacco', 'Tim']);
+  assert.deepEqual(REPORT_ITEMS.map(({src}) => path.basename(src)), ['3 (1).png', '4 (1).png']);
+});

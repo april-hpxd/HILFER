@@ -55,6 +55,7 @@ try {
     };
   });
   await page.goto(target); await ready(page);
+  await openAssistant(page);
   for (const path of ['assets/sounds/glitch.mp3', 'assets/arwa/icons/assistant-pixel.webp']) {
     assert.equal((await page.request.get(new URL(path, target).href)).status(), 200);
   }
@@ -63,9 +64,7 @@ try {
   const launcher = page.locator('#assistant-portrait');
   assert.ok(await launcher.isVisible());
   assert.ok(await balloon.isVisible(), 'assignment delivery opens the balloon without a click');
-  assert.ok(await page.locator('.ai-transcript').evaluate(el => el !== document.activeElement));
-  assert.equal(await page.evaluate(() => window.assistantAudio), undefined);
-  await page.mouse.click(1200, 80);
+  assert.ok(await page.locator('.ai-transcript').evaluate(el => el === document.activeElement));
   await page.waitForFunction(() => window.assistantAudio?.currentTime > 0);
   assert.match(await page.evaluate(() => assistantAudio.src), /welcome-v3\.mp3$/);
   assert.equal(await balloon.getByRole('button', {name:'Mute'}).count(), 0);
@@ -82,8 +81,8 @@ try {
   await launcher.click();
   assert.equal(await page.evaluate(() => assistantPlays), 1);
   const portrait = page.locator('.ai-avatar');
-  assert.match(await portrait.getAttribute('src'), /\/assistant\.webp$/);
-  assert.equal(await portrait.evaluate(async img => { await img.decode(); return img.naturalWidth; }), 174);
+  assert.equal(await portrait.getAttribute('src'), 'assets/arwa/ai_states/ai1.png');
+  assert.ok(await portrait.evaluate(async img => { await img.decode(); return img.naturalWidth > 0; }));
   assert.match(await page.locator('.ai-transcript').innerText(), /Welcome to HILFER/);
   assert.equal(await page.locator('[data-ai-next]').count(), 0);
   assert.doesNotMatch(await page.locator('.ai-transcript').innerText(), /OH-008|NOT_CLEARED|Not cleared/);
@@ -102,15 +101,18 @@ try {
   await page.waitForFunction(() => document.querySelector('#glitch-sound').paused);
   assert.ok(await page.locator('#glitch-sound').evaluate(el => el.currentTime === 0 && el.volume === 0.2));
   assert.equal(await page.evaluate(() => filings), 1);
+  await page.waitForFunction(() => hilfer.aiState.get() === 1);
+  await page.waitForFunction(() => cuePlays >= 2);
+  await page.waitForFunction(() => document.querySelector('#glitch-sound').paused);
   await page.evaluate(() => hilfer.reconcileClaim('CASE-001','OH-008','workEligibility'));
-  assert.equal(await page.evaluate(() => cuePlays), 1); assert.equal(await page.evaluate(() => filings), 1);
+  assert.equal(await page.evaluate(() => cuePlays), 2); assert.equal(await page.evaluate(() => filings), 1);
   await page.screenshot({path:join(tmpdir(), 'hilfer-assistant-notification.png')});
   // Unread correspondence survives reload without replaying audiovisual rewards.
   await page.reload(); await ready(page);
   assert.ok(await page.locator('#assistant-notification').isVisible());
   assert.ok(await balloon.isHidden(), 'reload does not repeat a delivered popup');
-  assert.match(await portrait.getAttribute('src'), /\/assistant-distorted\.webp$/);
-  assert.equal(await portrait.evaluate(async img => { await img.decode(); return img.naturalWidth; }), 174);
+  assert.equal(await portrait.getAttribute('src'), 'assets/arwa/ai_states/ai2.png');
+  assert.ok(await portrait.evaluate(async img => { await img.decode(); return img.naturalWidth > 0; }));
   assert.ok(await page.locator('#glitch-sound').evaluate(el => el.paused && el.currentTime === 0));
   assert.ok(await page.locator('html').evaluate(el => !el.classList.contains('microglitch')));
   await page.locator('#assistant-notification').focus();
@@ -121,7 +123,7 @@ try {
   assert.match(await page.locator('.ai-transcript').innerText(), /entry for Jessica has been revised/);
   assert.notEqual(await page.locator('.ai-avatar').evaluate(el => getComputedStyle(el).filter), 'none');
   await page.screenshot({path:join(tmpdir(), 'hilfer-assistant-filed.png'), animations:'disabled'});
-  assert.equal(await page.locator('.taskbar-item[data-window="ai"]').count(), 0);
+  assert.equal(await page.locator('.taskbar-item[data-window="ai"]').count(), 0, 'the docked Assistant does not create a taskbar window');
   await page.keyboard.press('Escape');
   assert.ok(await balloon.isHidden());
   assert.equal(await launcher.getAttribute('aria-expanded'), 'false');
@@ -137,7 +139,7 @@ try {
   assert.match(await page.locator('.ai-transcript').innerText(), /Welcome to HILFER/);
   assert.doesNotMatch(await page.locator('.ai-transcript').innerText(), /entry for Jessica has been revised/);
   assert.equal(await page.locator('.ai-avatar').evaluate(el => getComputedStyle(el).filter), 'none');
-  assert.match(await portrait.getAttribute('src'), /\/assistant\.webp$/);
+  assert.equal(await portrait.getAttribute('src'), 'assets/arwa/ai_states/ai1.png');
   assert.equal(await page.evaluate(() => localStorage.getItem('hilfer:assistant:v1')), null);
   await observe(page); await fileJessica(page);
   await page.waitForFunction(() => cuePlays === 1); assert.ok(await page.locator('#assistant-notification').isVisible());
