@@ -1,50 +1,22 @@
 import { escapeHTML as h } from './shared.js';
+import { createAssistantVoice } from './assistant-voice.js';
 
-// Adapted from Altynai's HILFER assistant. Messages are a projection of game state.
+// The demo maps today's game state to dialogue signals. The final game's event
+// sequence can select the same entries without changing their copy or voice.
 export function deriveAssistant(state, records, content) {
   const filed = state.completedCaseIds.includes(content.caseId) && Boolean(state.resolutions[content.caseId]);
   const investigating = records.some(record => record.caseIds.includes(content.caseId) && state.discoveredEvidenceIds.includes(record.id));
   const phase = filed ? 'filed' : investigating ? 'investigating' : 'welcome';
-  const dialogueLines = (entry, prefix) => {
-    if (!entry) return [];
-    const lines = Array.isArray(entry.lines) ? entry.lines : [entry];
-    return lines.map((line, index) => ({
-      id: `${content.caseId}:${prefix}:${line.id ?? index}`,
-      label: line.label ?? entry.label ?? 'HILFER Assistant',
-      text: line.text
-    })).filter(line => typeof line.text === 'string' && line.text.length > 0);
-  };
-  return { phase, messages: [...dialogueLines(content.welcome, 'welcome'), ...(phase === 'welcome' ? [] : dialogueLines(content[phase], phase))],
+  const signal = filed ? 'case.report-filed' : investigating ? 'case.review-started' : 'assignment.available';
+  const entry = content.dialogue.find(message => message.on === signal);
+  const welcome = content.dialogue.find(message => message.on === 'assignment.available');
+  return { phase, signal, messages: [...new Set([welcome, entry])].filter(Boolean),
+    voice: entry?.voice ?? null,
     notificationId: filed ? content.caseId + ':reconciled' : null };
 }
 
 // UI receipts only; no evidence, resolutions or progression are stored here.
 export const ASSISTANT_RECEIPT_KEY = 'hilfer:assistant:v1';
-export const ASSISTANT_DIALOGUE_KEY = 'hilfer:assistant-dialogue:v1';
-
-export function createDialogueCheckpoint(storage, caseId) {
-  const completed = new Set();
-  function load() {
-    completed.clear();
-    try {
-      const saved = JSON.parse(storage?.getItem(ASSISTANT_DIALOGUE_KEY) ?? 'null');
-      if (saved?.version === 1 && saved.caseId === caseId && Array.isArray(saved.completedIds)) {
-        for (const id of saved.completedIds) if (typeof id === 'string') completed.add(id);
-      }
-    } catch { /* Malformed or unavailable storage starts with an empty session checkpoint. */ }
-  }
-  load();
-  return {
-    hasCompleted: id => completed.has(id),
-    markCompleted(id) {
-      if (!id || completed.has(id)) return;
-      completed.add(id);
-      try { storage?.setItem(ASSISTANT_DIALOGUE_KEY, JSON.stringify({ version: 1, caseId, completedIds: [...completed] })); } catch { /* Session checkpoint still works. */ }
-    },
-    reset() { completed.clear(); try { storage?.removeItem(ASSISTANT_DIALOGUE_KEY); } catch { /* In-memory reset remains available. */ } }
-  };
-}
-
 export function createAssistantReceipt(storage, notificationId) {
   let read = false;
   try {
@@ -62,99 +34,163 @@ export function createAssistantReceipt(storage, notificationId) {
   };
 }
 
-// Browser-native speech queue. It narrates the currently projected dialogue in order;
-// browsers may require the Play button to be pressed by the user before speech can start.
-export function createDialogueVoice({ speech = globalThis.speechSynthesis, Utterance = globalThis.SpeechSynthesisUtterance } = {}) {
-  let stopped = false;
-  return {
-    supported: Boolean(speech && Utterance),
-    stop() { stopped = true; speech?.cancel(); },
-    play(messages, isCompleted, onCompleted, onStatus = () => {}) {
-      if (!speech || !Utterance) { onStatus('Text to speech is not available in this browser.'); return; }
-      speech.cancel();
-      stopped = false;
-      const speakAt = index => {
-        if (stopped) return;
-        while (index < messages.length && isCompleted(messages[index].id)) index++;
-        if (index >= messages.length) { onStatus('Dialogue is up to date.'); return; }
-        const line = messages[index];
-        const utterance = new Utterance(`${line.label}. ${line.text}`);
-        utterance.onstart = () => onStatus(`Speaking: ${line.label}`);
-        utterance.onerror = event => { if (event.error !== 'canceled' && event.error !== 'interrupted') onStatus('Speech playback stopped.'); };
-        utterance.onend = () => { if (stopped) return; onCompleted(line.id); speakAt(index + 1); };
-        speech.speak(utterance);
-      };
-      if (!messages.some(message => !isCompleted(message.id))) { onStatus('Dialogue is up to date.'); return; }
-      speakAt(0);
-    }
-  };
-}
-
 export function mountAI(root, store, content, { storage, aiState } = {}) {
   const receipt = createAssistantReceipt(storage, content.caseId + ':reconciled');
-  const notification = document.querySelector('#assistant-notification');
-  const announcement = document.querySelector('#assistant-announcement');
-  const windowEl = root.closest('.window');
-  const initialPortrait = aiState ? aiState.portraitFor(aiState.get()) : 'assets/placeholders/personnel.svg';
-  root.innerHTML = `<header class="ai-profile"><img class="ai-avatar" src="${initialPortrait}" alt="HILFER Assistant profile portrait" loading="eager" decoding="async"><div><h1>HILFER Assistant</h1><p>Internal support</p></div></header>
+  root.innerHTML = `<section id="assistant-balloon" class="assistant-balloon" aria-labelledby="assistant-title" hidden>
+    <header class="ai-profile"><h1 id="assistant-title">HILFER Assistant</h1><button type="button" data-assistant-dismiss aria-label="Dismiss Assistant">Close</button></header>
     <div class="ai-transcript" tabindex="-1" role="log" aria-label="Assistant correspondence" aria-live="polite" aria-relevant="additions"></div>
-    <div class="ai-voice-controls"><button type="button" data-voice-play>Play dialogue</button><button type="button" data-voice-stop disabled>Stop voice</button></div>
     <div class="ai-actions"><button data-open="reconciliation">Open Reconciliation</button><button data-open="records">Open Records</button></div>
-    <p class="ai-status" role="status"></p>`;
-  if (aiState) {
-    const avatar = root.querySelector('.ai-avatar');
-    function syncAvatar() { avatar.src = aiState.portraitFor(aiState.get()); }
-    // ai-state changes outside this module's control (e.g. the glitch-1 handler calling
-    // aiState.advance()); poll on the events that can plausibly follow a state change rather
-    // than adding a second independent subscription system.
-    window.addEventListener('hilfer:ai-state-changed', syncAvatar);
+    </section>
+    <div class="assistant-launch">
+      <button type="button" id="assistant-notification" class="assistant-notification" aria-controls="assistant-balloon" hidden>Report updated</button>
+      <button type="button" id="assistant-portrait" aria-label="HILFER Assistant" aria-controls="assistant-balloon" aria-expanded="false"><img class="ai-avatar" alt=""></button>
+    </div>
+    <span class="assistant-announcement" id="assistant-announcement" role="status" aria-live="polite"></span>`;
+  const notification = root.querySelector('#assistant-notification');
+  const announcement = root.querySelector('#assistant-announcement');
+  const launcher = root.querySelector('#assistant-portrait');
+  const balloon = root.querySelector('#assistant-balloon');
+  const log = root.querySelector('.ai-transcript');
+  const voice = createAssistantVoice(storage, content.caseId);
+  const portrait = root.querySelector('.ai-avatar');
+  let previousPortraitState = aiState?.get() ?? 0;
+  const deliveryKey = 'hilfer:assistant-delivery:v1';
+  const delivered = new Set();
+  try {
+    const saved = JSON.parse(storage?.getItem(deliveryKey) ?? 'null');
+    if (saved?.caseId === content.caseId && Array.isArray(saved.signals)) {
+      for (const signal of saved.signals) if (content.dialogue.some(entry => entry.on === signal)) delivered.add(signal);
+    }
+  } catch { /* Delivery still deduplicates in this session. */ }
+  const history = new Set();
+  let voiceCue = null;
+  let needsGesture = false;
+  function speakPending() {
+    if (!voiceCue || document.hidden) return;
+    if (navigator.userActivation?.hasBeenActive === false) { needsGesture = true; return; }
+    voice.play(voiceCue, {
+      onEnded: speakPending,
+      onError(error) {
+        needsGesture = error?.name === 'NotAllowedError';
+        if (!needsGesture) announcement.textContent = 'Voice unavailable.';
+      }
+    });
   }
+  let portraitAnimationTimer;
+  function updateAiPortrait({ detail } = {}) {
+    if (!aiState) return;
+    const state = Number.isInteger(detail?.state) ? detail.state : aiState.get();
+    const source = aiState.portraitFor(state);
+    if (portrait.getAttribute('src') === source) return;
+    portrait.src = source;
+    portrait.classList.remove('assistant-state-glitch');
+    clearTimeout(portraitAnimationTimer);
+    if (state <= previousPortraitState) {
+      previousPortraitState = state;
+      return;
+    }
+    previousPortraitState = state;
+    void portrait.offsetWidth;
+    portrait.classList.add('assistant-state-glitch');
+    portraitAnimationTimer = setTimeout(() => portrait.classList.remove('assistant-state-glitch'), 720);
+  }
+  if (aiState) window.addEventListener('hilfer:ai-state-changed', updateAiPortrait);
   let previousPhase;
   let wasUnread = false;
-  const voice = createDialogueVoice();
-  const dialogueCheckpoint = createDialogueCheckpoint(storage, content.caseId);
-  const voiceStatus = root.querySelector('.ai-status');
-  const playButton = root.querySelector('[data-voice-play]');
-  const stopButton = root.querySelector('[data-voice-stop]');
-  playButton.disabled = !voice.supported;
-  stopButton.disabled = !voice.supported;
-  playButton.addEventListener('click', () => {
-    const model = deriveAssistant(store.getState(), store.getRecords(), content);
-    stopButton.disabled = false;
-    voice.play(model.messages, dialogueCheckpoint.hasCompleted, dialogueCheckpoint.markCompleted, message => {
-      voiceStatus.textContent = message;
-      if (message === 'Dialogue is up to date.') stopButton.disabled = true;
-    });
-  });
-  stopButton.addEventListener('click', () => { voice.stop(); stopButton.disabled = true; voiceStatus.textContent = 'Voice stopped.'; });
+  function renderHistory() {
+    log.innerHTML = [...history].map(message => `<section class="ai-message"><h2>${h(message.label)}</h2><p>${h(message.text)}</p></section>`).join('');
+    log.scrollTop = log.scrollHeight;
+  }
+  function deliver(signal) {
+    const entry = content.dialogue.find(message => message.on === signal);
+    if (!entry || delivered.has(signal)) return;
+    delivered.add(signal);
+    try {
+      storage?.setItem(deliveryKey, JSON.stringify({caseId:content.caseId, signals:[...delivered]}));
+    } catch { /* Delivery still deduplicates in this session. */ }
+    history.add(entry);
+    voiceCue = entry.voice ?? null;
+    renderHistory();
+    setOpen(true, false);
+    speakPending();
+  }
   function update() {
-    const model = deriveAssistant(store.getState(), store.getRecords(), content);
-    if (model.phase !== previousPhase) {
-      voice.stop();
-      stopButton.disabled = true;
-      const log = root.querySelector('.ai-transcript');
-      log.innerHTML = model.messages.map(message => `<section class="ai-message"><h2>${h(message.label)}</h2><p>${h(message.text)}</p></section>`).join('');
-      log.scrollTop = log.scrollHeight;
-      root.querySelector('.ai-status').textContent = model.phase === 'filed' ? 'Report revision registered.' : 'Personnel review / pending';
-      previousPhase = model.phase;
+    const state = store.getState();
+    const model = deriveAssistant(state, store.getRecords(), content);
+    if (aiState) {
+      updateAiPortrait();
+    } else {
+      const face = state.distortionLevel > 0 ? 'assistant-distorted' : 'assistant';
+      const portraitSrc = `assets/arwa/portraits/${face}.webp`;
+      if (portrait.getAttribute('src') !== portraitSrc) portrait.src = portraitSrc;
     }
-    if (model.notificationId && windowEl.classList.contains('active') && windowEl.classList.contains('visible')) receipt.markRead();
+    if (model.phase !== previousPhase && (model.phase !== 'welcome' || !previousPhase)) {
+      if (!previousPhase) {
+        for (const signal of delivered) history.add(content.dialogue.find(message => message.on === signal));
+      }
+      for (const message of model.messages) history.add(message);
+      voiceCue = model.voice;
+      previousPhase = model.phase;
+      renderHistory();
+      deliver(model.signal);
+    }
     const unread = Boolean(model.notificationId) && !receipt.isRead();
     notification.hidden = !unread;
     if (unread !== wasUnread) announcement.textContent = unread ? 'HILFER Assistant has a report update.' : '';
     wasUnread = unread;
   }
-  window.addEventListener('hilfer:window-activated', ({ detail }) => {
-    if (detail.windowId === 'ai') {
-      const focusCorrespondence = !windowEl.contains(document.activeElement);
+  function setOpen(open, focus = true) {
+    const justOpened = open && balloon.hidden;
+    balloon.hidden = !open;
+    if (open && (justOpened || focus)) balloon.toggleAttribute('data-passive', !focus);
+    launcher.setAttribute('aria-expanded', String(open));
+    update();
+    if (open && focus && previousPhase === 'filed') {
+      receipt.markRead();
       update();
-      if (focusCorrespondence) root.querySelector('.ai-transcript').focus({ preventScroll: true });
     }
+    if (justOpened && focus) speakPending();
+    if (open) log.scrollTop = log.scrollHeight;
+    if (focus) (open ? log : launcher).focus({preventScroll: true});
+  }
+  launcher.addEventListener('click', () => setOpen(balloon.hidden));
+  notification.addEventListener('click', () => setOpen(true));
+  root.querySelector('[data-assistant-dismiss]').addEventListener('click', () => setOpen(false));
+  root.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !balloon.hidden) {
+      event.stopPropagation();
+      setOpen(false);
+    }
+  });
+  root.querySelector('.ai-actions').addEventListener('click', event => {
+    if (event.target.closest('[data-open]')) setOpen(false);
+  });
+  window.addEventListener('hilfer:assistant-open', () => setOpen(true));
+  window.addEventListener('hilfer:assistant-dialogue', ({detail}) => deliver(detail?.signal));
+  function retryVoice(event) {
+    if (!event.isTrusted || !needsGesture) return;
+    needsGesture = false;
+    speakPending();
+  }
+  document.addEventListener('click', retryVoice, true);
+  document.addEventListener('keydown', retryVoice, true);
+  window.addEventListener('pagehide', voice.stop);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) voice.stop();
+    else if (!balloon.hidden) speakPending();
   });
   store.subscribe(update);
   store.onEvent(({ type }) => {
-    if (type === 'hilfer:progress-reset') { receipt.reset(); dialogueCheckpoint.reset(); voice.stop(); update(); }
+    if (type === 'hilfer:progress-reset') {
+      receipt.reset();
+      voice.reset();
+      delivered.clear();
+      history.clear();
+      previousPhase = undefined;
+      update();
+    }
     if (type === 'hilfer:case-reconciled') update();
   });
   update();
+  root.hidden = false;
 }

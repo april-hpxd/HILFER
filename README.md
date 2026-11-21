@@ -1,26 +1,36 @@
+<p align="center"><img src="assets/arwa/logo.webp" alt="HILFER" width="152"></p>
+
 # HILFER Workstation
 
-A playable institutional-horror prototype inside a fictional corporate Windows 98 desktop. Reconcile Jessica's conflicting work-clearance records and observe the first workstation anomaly.
+HILFER is a playable institutional-horror prototype set inside a fictional corporate Windows 98 workstation. Investigate conflicting personnel records, decide what belongs in the official incident report, and watch the desktop react.
 
-## Run
+## Run the demo
 
-From this folder:
+Requires Python 3 and a modern browser. From the repository root:
 
 ```sh
 python scripts/serve.py --port 8080
 ```
 
-Open [HILFER locally](http://127.0.0.1:8080). No build or packages required. Use a modern desktop browser; keyboard navigation is supported throughout the investigative interface.
+Open [http://127.0.0.1:8080](http://127.0.0.1:8080). The demo runs on local HTML, CSS, vanilla JavaScript and JSON, with no build step or runtime packages. If the port is in use, pass a different port and open the matching URL. Saves are local to the browser and origin.
 
-Open **Reconciliation** to inspect the initial unverified personnel entry (AVAILABLE / HR-014). Then open **Records** and inspect Jessica's HR and Occupational Health forms. Select the work-clearance claim inside a document to compare it with the existing report entry. Choose **Use OH-008 in report** to file the supported correction (NOT_CLEARED). The living report updates immediately; the first glitch and next case unlock. No dragging, dropdowns, or separate Commit button are required. Reload preserves progress. **Start → Reset Demo Progress** starts over.
+## What to try
 
-The **HILFER Assistant** is scripted correspondence that reflects assignment, investigation, and filing state; it is not a live AI service. HILFER Mail provides the approved demo mailbox and archive. Only CASE-001 is playable. CASE-002 is an explicit unlocked placeholder. Clearance does not establish the cause of illness. The shell uses Arwa's graphics from Altynai's adaptation; [asset credits and provenance](assets/arwa/CREDITS.md). The personnel portrait remains a neutral placeholder.
+| App | What it does |
+| --- | --- |
+| **Reconciliation** | Opens the Consolidated Report with a provisional claim. Inspect Jessica's clearance in Records and select **Compare status with report** to compare sources. **Update report** files an accepted correction. |
+| **Records** | Browse HR and Occupational Health files, inspect the source fields, and open the comparison from the record itself. |
+| **Mail** | Double-click a conversation or press Enter to open its reader. Browse Inbox and Archive, search correspondence, and move threads to Deleted Items or restore them. One message links to Records. Sent has no outgoing mail in this demo. |
+| **HILFER Assistant** | The portrait sits above the taskbar. New dialogue opens a balloon without moving keyboard focus. The portrait also opens it manually. If the browser blocks automatic narration, it waits for the first interaction. |
+| **Footage** | Play a short, read-only CAM 4 preview. |
+| **Display Properties** | Switch between Standard and Archive / Graphite or toggle the desktop logo treatment. |
 
-## Checks and integration
+CASE-001 is the playable investigation. Filing its correction changes the report, unlocks the CASE-002 placeholder, and triggers the first audiovisual anomaly. Reload preserves progress. Use **Start → Reset Demo Progress** before another run.
 
-- `node --test` or `npm test`: validation, claim flow, provisional report, progression, idempotence, persistence and reset; Node 18+.
-- `tests/browser.check.js`: optional Playwright/Edge regression for document claim selection, comparison, report update, source navigation and persistence. See [integration instructions](docs/INTEGRATION.md) for setup.
-- [Integration contracts](docs/INTEGRATION.md): data schemas, central store, drag IDs, events, persistence and graphics replacement.
-- [Project context](docs/PROJECT_CONTEXT.md), [design decisions](docs/DESIGN_DECISIONS.md), [agent instructions](AGENTS.md).
+## Implementation and checks
 
-HTML/CSS/vanilla ES modules, static JSON and localStorage. The shell adapts [pollygon-dev/WIN98-template](https://github.com/pollygon-dev/WIN98-template), based on HTML5-Templates.com. Public-domain license preserved in [LICENSE](LICENSE). The upstream snapshot in `references/WIN98-template/` is unchanged.
+- [Integration guide](docs/INTEGRATION.md) covers app interfaces, dialogue signals, saves, and browser checks.
+- [Project context](docs/PROJECT_CONTEXT.md) and [design decisions](docs/DESIGN_DECISIONS.md) distinguish current behavior from future story and mechanics.
+- [Credits](CREDITS.md) and [artwork provenance](assets/arwa/CREDITS.md) identify the template, type, icons and team assets.
+
+Run `node --test` with Node 18 or newer. The optional browser suites use Playwright and Microsoft Edge against the running local server. See the [browser setup](docs/INTEGRATION.md#run-and-checks).

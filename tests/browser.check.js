@@ -10,66 +10,69 @@ const page = await browser.newPage({viewport:{width:1440,height:1000},reducedMot
 const errors = [];
 page.on('pageerror', error => errors.push(error.message));
 const target = process.env.HILFER_URL || 'http://127.0.0.1:8080';
+const openFromMenu = async (targetPage, id) => {
+  const menu = targetPage.locator('#start-menu');
+  if (!(await menu.evaluate(el => el.classList.contains('visible')))) await targetPage.locator('.start-button').click();
+  await menu.locator(`.start-menu-item[data-open="${id}"]`).click();
+};
 
 try {
   await page.goto(target);
   await page.waitForFunction(() => window.hilfer);
-  const movableIcon = page.locator('.desktop-icons .icon').first();
-  const initialIconBounds = await movableIcon.boundingBox();
-  await page.mouse.move(initialIconBounds.x + 30, initialIconBounds.y + 25);
-  await page.mouse.down();
-  await page.mouse.move(initialIconBounds.x + 90, initialIconBounds.y + 65, {steps:8});
-  await page.mouse.up();
-  const movedIconBounds = await movableIcon.boundingBox();
-  assert.ok(movedIconBounds.x > initialIconBounds.x + 40);
-  assert.ok(movedIconBounds.y > initialIconBounds.y + 20);
-  assert.ok(await page.locator('#reconciliation-window').isHidden(), 'dragging an icon does not open its app');
-  await page.setViewportSize({width:980,height:700});
-  const resizedIconBounds = await movableIcon.boundingBox();
-  const desktopBounds = await page.locator('#desktop').boundingBox();
-  assert.ok(resizedIconBounds.width < movedIconBounds.width, 'desktop icons scale down with the workspace');
-  assert.ok(resizedIconBounds.x >= desktopBounds.x && resizedIconBounds.x + resizedIconBounds.width <= desktopBounds.x + desktopBounds.width);
-  assert.ok(resizedIconBounds.y >= desktopBounds.y && resizedIconBounds.y + resizedIconBounds.height <= desktopBounds.y + desktopBounds.height - 58);
-  await page.setViewportSize({width:1440,height:1000});
-  assert.equal(await movableIcon.evaluate(el => getComputedStyle(el).fontFamily), 'Tahoma, sans-serif');
-  assert.equal(await page.locator('.report-letterhead b').evaluate(el => getComputedStyle(el).fontFamily), 'Tahoma, sans-serif');
-  assert.equal(await page.locator('.desktop-icons .icon').count(), 19);
-  assert.equal(await page.locator('.desktop-icons .icon[data-open]').count(), 19, 'every desktop icon opens an application');
-  assert.ok(await page.locator('.desktop-icons .icon-text').evaluateAll(els => els.every(el => el.textContent === el.textContent.toUpperCase())));
-  await page.locator('.desktop-icons [data-open="my-computer"]').click();
-  assert.ok(await page.locator('#my-computer-window').isVisible());
-  assert.equal(await page.locator('#my-computer-window .window-content').innerText(), 'My Computer');
-  await page.getByRole('button', {name:'Close My Computer'}).click();
+  const desktopIcons = page.locator('.desktop-icons .icon');
+  const iconLabels = await page.locator('.desktop-icons .icon-text').allTextContents();
+  assert.deepEqual(iconLabels, ['Reconciliation', 'Records', 'Display', 'HILFER Assistant', 'Mail', 'Footage', 'Reports']);
+  assert.equal(await desktopIcons.count(), 7);
+  assert.equal(await page.locator('.desktop-build').textContent(), 'HILFER INTERNAL OS v2.4.1');
+  assert.ok((await page.locator('.desktop-build').boundingBox()).x < 60, 'the OS build label sits at the upper-left');
+  const iconBounds = await desktopIcons.evaluateAll(icons => icons.map(icon => {
+    const {x, y} = icon.getBoundingClientRect();
+    return {x, y};
+  }));
+  assert.ok(iconBounds.slice(0, 6).every(bounds => bounds.x < 100), 'the six friend-version app icons stay in the left desktop column');
+  assert.ok(iconBounds.slice(0, 6).every((bounds, index) => !index || bounds.y > iconBounds[index - 1].y), 'the original desktop icons remain vertically ordered');
+  assert.ok(iconBounds[6].x > 100 && iconBounds[6].y <= iconBounds[0].y + 1, 'Reports sits beside the existing desktop icons');
+  assert.ok(await page.locator('#ai-window').count() === 0, 'Assistant remains docked rather than becoming an application window');
+  const balloonBounds = await page.locator('#assistant-balloon').boundingBox();
+  const portraitBounds = await page.locator('#assistant-portrait').boundingBox();
+  assert.ok(balloonBounds.x > 1440 * .7 && portraitBounds.x > 1440 * .8, 'Assistant stays at the bottom-right of the desktop');
+  assert.ok(balloonBounds.y + balloonBounds.height <= portraitBounds.y + 1, 'the Assistant balloon appears above its docked portrait');
+  assert.match(await page.locator('.desktop-icons .icon-text').first().evaluate(el => getComputedStyle(el).fontFamily), /Pixelated MS Sans Serif/);
+  assert.equal(await page.locator('.report-letterhead b').evaluate(el => getComputedStyle(el).fontFamily), 'Tahoma, Arial, sans-serif');
+  assert.equal(await desktopIcons.count(), 7, 'Reports is added without moving the original six desktop applications');
+  assert.equal(await page.locator('.desktop-icons .icon[data-open]').count(), 7);
+  const footageLauncher = page.locator('.desktop-icons [data-open="footage"]');
+  assert.ok(await footageLauncher.isEnabled(), 'Footage remains clickable while restricted');
+  await footageLauncher.click();
+  assert.ok(await page.locator('#footage-window').isHidden(), 'locked Footage does not open the video');
+  assert.ok(await page.locator('#access-restricted-window').isVisible());
+  assert.equal(await page.locator('.access-restricted-image').getAttribute('src'), 'assets/arwa/warnings/access_restricted.png');
+  assert.ok(await page.locator('.access-restricted-image').evaluate(img => img.naturalWidth > 0));
+  await page.locator('.access-restricted-cancel').click();
+  assert.ok(await page.locator('#access-restricted-window').isHidden(), 'Cancel closes the warning');
+  await openFromMenu(page, 'footage');
+  assert.ok(await page.locator('#access-restricted-window').isVisible(), 'the Start-menu launcher opens the same warning');
+  await page.locator('.access-restricted-close').click();
+  assert.ok(await page.locator('#access-restricted-window').isHidden(), 'the image close control closes the warning');
+  assert.equal(await page.locator('.start-menu-item[data-open="reports"]').count(), 0, 'Reports is on the desktop, not duplicated in Start');
+  await page.locator('#reports-desktop-icon').click();
+  assert.ok(await page.locator('#reports-window').isVisible());
+  assert.deepEqual(await page.locator('#reports-app [data-select-report] b').allTextContents(), ['Spacco', 'Tim']);
+  assert.equal(await page.locator('#reports-app .report-image').getAttribute('alt'), 'Employee report for Spacco');
+  await page.locator('#reports-app [data-select-report="REPORT-002"]').click();
+  assert.equal(await page.locator('#reports-app .report-image').getAttribute('alt'), 'Employee report for Tim');
+  await page.locator('#reports-window [data-control="close"]').click();
   await page.locator('#display-theme').evaluate(select => {
     select.value = 'archive';
     select.dispatchEvent(new Event('change', {bubbles:true}));
   });
-  const archiveArt = await page.locator('.desktop-icons .icon-image').evaluateAll(els => els.map(el => getComputedStyle(el).backgroundImage));
-  assert.ok(archiveArt.every(image => /not(?:%20| )saturated|graphite\.webp/.test(image)), 'graphite uses all muted desktop icons');
   assert.match(await page.locator('.desktop-logo').evaluate(el => getComputedStyle(el).backgroundImage), /logo-graphite\.webp/);
-  assert.ok(await page.locator('.desktop-icons .icon-image').evaluateAll(els => els.every(el => getComputedStyle(el).mixBlendMode === 'multiply')), 'graphite blends white icon backdrops into the desktop');
-  for (const id of ['ai', 'themes']) {
-    const bounds = await page.locator(`.desktop-icons [data-open="${id}"]`).boundingBox();
-    assert.ok(bounds.x > 1440 * 0.7, `${id} sits in the open right-hand desktop area`);
-    assert.ok(bounds.y + bounds.height < 1000 - 58, `${id} stays above the taskbar`);
-  }
-  assert.match(await page.locator('.file-symbol').first().evaluate(el => getComputedStyle(el).backgroundImage), /file-graphite\.webp/, 'graphite also changes the record-list file icon');
-  assert.equal(await page.locator('.file-symbol').first().evaluate(el => getComputedStyle(el).mixBlendMode), 'multiply');
   await page.locator('#display-theme').evaluate(select => {
     select.value = 'default';
     select.dispatchEvent(new Event('change', {bubbles:true}));
   });
-  const standardArt = await page.locator('.desktop-icons .icon-image').evaluateAll(els => els.map(el => getComputedStyle(el).backgroundImage));
-  assert.ok(standardArt.every(image => /\/saturated\/|-pixel\.webp/.test(image) && !/not(?:%20| )saturated|graphite\.webp/.test(image)), 'standard uses saturated desktop icons');
-  assert.ok(await page.locator('.desktop-icons .icon-image').evaluateAll(els => els.every(el => getComputedStyle(el).mixBlendMode === 'normal')), 'standard icon artwork is unchanged');
-  assert.match(await page.locator('.file-symbol').first().evaluate(el => getComputedStyle(el).backgroundImage), /file-pixel\.webp/);
-  for (const asset of ['reconciliation', 'records', 'terminal', 'settings', 'file']) {
-    assert.equal((await page.request.get(new URL('/assets/arwa/saturated/' + asset + '.png', target).href)).status(), 200);
-  }
-  assert.equal((await page.request.get(new URL('/assets/arwa/saturated/downloads.png', target).href)).status(), 200);
-  assert.equal((await page.request.get(new URL('/assets/arwa/not%20saturated/downloads.png', target).href)).status(), 200);
   const report = page.locator('[data-report-section="CASE-001"]');
-  await page.locator('[data-open="reconciliation"]').first().click();
+  await openFromMenu(page, 'reconciliation');
   assert.equal(await page.locator('#report-tab').getAttribute('aria-selected'), 'true');
   for (const text of ['Available for duty', 'Human Resources', 'Unverified']) assert.ok((await report.textContent()).includes(text));
   assert.doesNotMatch(await report.textContent(), /OH-008|NOT_CLEARED/);
@@ -78,7 +81,7 @@ try {
   assert.equal(await report.locator('details').getAttribute('open'), null);
 
   // Records is investigative: merely listing files does not attach or reconcile them.
-  await page.locator('[data-open="records"]').first().click();
+  await openFromMenu(page, 'records');
   assert.deepEqual(await page.evaluate(() => hilfer.getState().completedCaseIds), []);
   assert.match(await page.locator('[data-file-id="HR-014"]').innerText(), /Jessica — Personnel File/);
   await page.locator('#records-search').fill('HR-014');
@@ -100,7 +103,7 @@ try {
   assert.equal(await page.locator('.claim-apply').count(), 0, 'baseline alone cannot complete a case');
   assert.deepEqual(await page.evaluate(() => hilfer.getState().completedCaseIds), []);
 
-  await page.locator('[data-open="records"]').first().click();
+  await openFromMenu(page, 'records');
   await page.locator('[data-file-id="OH-008"]').click();
   assert.match(await page.locator('.medical-document').textContent(), /Not established/);
   await page.locator('.claim-source').click();
@@ -110,22 +113,35 @@ try {
   await page.screenshot({path:join(tmpdir(), 'hilfer-editorial-comparison.png')});
   await page.locator('[data-dismiss-claim]').click();
   assert.deepEqual(await page.evaluate(() => hilfer.getState().completedCaseIds), [], 'keeping baseline remains unresolved');
-  await page.locator('[data-open="records"]').first().click();
+  await openFromMenu(page, 'records');
   await page.locator('.claim-source').click();
 
   await page.evaluate(() => {
     window.milestones = [];
-    hilfer.onEvent(({type}) => window.milestones.push(type));
+    hilfer.onEvent(({type}) => {
+      window.milestones.push(type);
+      if (type === 'hilfer:case-reconciled') {
+        window.sawGlitch = document.documentElement.classList.contains('microglitch');
+      }
+    });
   });
   await page.locator('.claim-apply').click();
   await page.waitForFunction(() => window.hilfer.getState().completedCaseIds.includes('CASE-001'));
+  assert.ok(await footageLauncher.isEnabled(), 'Footage remains clickable after the first case is filed');
   assert.equal(await page.locator('#report-tab').getAttribute('aria-selected'), 'true');
   for (const text of ['Filed', 'Not cleared for work', 'Occupational Health', 'Work-related cause', 'Not established']) assert.ok((await report.textContent()).includes(text));
   assert.deepEqual(await page.evaluate(() => hilfer.getState().attachedEvidence['CASE-001']), ['HR-014','OH-008']);
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 1);
   assert.ok(await page.evaluate(() => hilfer.getState().unlockedCaseIds.includes('CASE-002')));
   assert.equal(await page.locator('html').getAttribute('data-distortion'), '1');
-  assert.ok(await page.locator('html').evaluate(el => el.classList.contains('microglitch')));
+  await page.waitForSelector('#desktop.desktop-glitch-active');
+  assert.equal(await page.locator('#desktop').evaluate(el => getComputedStyle(el).animationName), 'desktopGlitchShift');
+  assert.equal(await page.locator('.desktop-glitch-overlay').evaluate(el => getComputedStyle(el, '::before').animationName), 'desktopGlitchTearA');
+  await page.waitForFunction(() => hilfer.aiState.get() === 1);
+  assert.equal(await page.locator('.dead-pixel-field span').count(), 9);
+  assert.equal(await page.locator('.ai-avatar').getAttribute('src'), 'assets/arwa/ai_states/ai2.png');
+  assert.match(await page.locator('#desktop').evaluate(el => getComputedStyle(el).backgroundImage), /wallpapers\/2\.png/);
+  assert.ok(await page.evaluate(() => window.sawGlitch));
   await page.waitForFunction(() => !document.documentElement.classList.contains('microglitch'));
   await page.evaluate(() => hilfer.reconcileClaim('CASE-001', 'OH-008', 'workEligibility'));
   assert.equal(await page.evaluate(() => milestones.filter(x => x === 'hilfer:case-reconciled').length), 1);
@@ -149,8 +165,20 @@ try {
   await page.locator('#reset-progress').click();
   assert.equal(await page.evaluate(() => hilfer.getState().completedCaseIds.length), 0);
   assert.equal(await page.evaluate(() => hilfer.getState().distortionLevel), 0);
-  await page.locator('[data-open="reconciliation"]').first().click();
+  assert.ok(await footageLauncher.isEnabled(), 'Footage remains clickable after reset');
+  await footageLauncher.click();
+  assert.ok(await page.locator('#access-restricted-window').isVisible(), 'reset routes Footage back to the warning');
+  await page.locator('.access-restricted-cancel').click();
+  assert.deepEqual(await page.evaluate(() => JSON.parse(localStorage.getItem('hilfer:glitches:v1')).triggered), []);
+  assert.match(await page.locator('#desktop').evaluate(el => getComputedStyle(el).backgroundImage), /wallpapers\/1\.png/);
+  await openFromMenu(page, 'reconciliation');
   for (const text of ['Available for duty', 'Unverified']) assert.ok((await report.textContent()).includes(text));
+  await page.evaluate(() => { hilfer.discover('OH-008'); hilfer.reconcileClaim('CASE-001', 'OH-008', 'workEligibility'); });
+  await page.waitForSelector('#desktop.desktop-glitch-active');
+  assert.equal(await page.locator('#desktop').evaluate(el => getComputedStyle(el).animationName), 'desktopGlitchShift');
+  await page.waitForFunction(() => !document.querySelector('#desktop').classList.contains('desktop-glitch-active'));
+  await page.locator('.start-button').click();
+  await page.locator('#reset-progress').click();
 
   // Keep the desktop-shell regression coverage alongside the new gameplay.
   await page.getByRole('button', {name:'Minimize Reconciliation',exact:true}).click();
@@ -162,7 +190,7 @@ try {
   await page.getByRole('button', {name:'Maximize Reconciliation',exact:true}).click();
   await page.getByRole('button', {name:'Close Reconciliation',exact:true}).click();
   assert.equal(await page.locator('.taskbar-item[data-window="reconciliation"]').count(), 0);
-  await page.locator('[data-open="records"]').first().click();
+  await openFromMenu(page, 'records');
   const before = await page.locator('#records-window').boundingBox();
   await page.mouse.move(before.x + before.width - 6, before.y + before.height - 6);
   await page.mouse.down();
@@ -174,12 +202,67 @@ try {
   await page.locator('#record-preview').evaluate(el => { el.scrollTop = el.scrollHeight; });
   assert.ok(await page.locator('#record-preview').evaluate(el => el.scrollHeight <= el.clientHeight || el.scrollTop > 0));
   const header = await page.locator('#records-window .window-header').boundingBox();
+  const recordsWindow = page.locator('#records-window');
+  const snapPreview = page.locator('.window-snap-preview');
+  await page.mouse.move(header.x + 180, header.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(header.x + 180, 16, {steps:8});
+  assert.ok(await snapPreview.isVisible(), 'the top of the window can enter the snap zone before touching the edge');
+  await page.mouse.move(header.x + 180, 9);
+  assert.ok(await snapPreview.isVisible());
+  assert.equal((await recordsWindow.boundingBox()).y, 0);
+  assert.equal((await recordsWindow.boundingBox()).width, resized.width);
+  await page.mouse.move(header.x + 180, header.y + 10);
+  assert.ok(await snapPreview.isHidden());
+  await page.mouse.move(header.x + 180, -18);
+  assert.ok(await snapPreview.isVisible(), 'captured drag shows snap preview above the viewport');
+  await page.mouse.up();
+  assert.ok(await snapPreview.isHidden());
+  assert.equal((await recordsWindow.boundingBox()).width, 1440);
+  await recordsWindow.getByRole('button', {name:'Maximize Records', exact:true}).click();
+  assert.deepEqual(await recordsWindow.boundingBox(), resized);
+  await page.mouse.move(header.x + 180, header.y + 10);
+  await page.mouse.down();
+  await page.mouse.move(header.x + 180, 4);
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  assert.ok(await snapPreview.isHidden());
+  assert.deepEqual(await recordsWindow.boundingBox(), resized);
   await page.mouse.move(header.x + 180, header.y + 10); await page.mouse.down();
   await page.mouse.move(5, header.y + 10, {steps:12}); await page.mouse.up();
   const released = await page.locator('#records-window').boundingBox();
   assert.ok(released.x < 0, 'window can move past the viewport edge');
   await page.mouse.move(100, 100);
   assert.deepEqual(await page.locator('#records-window').boundingBox(), released);
+  await recordsWindow.getByRole('button', {name:'Maximize Records', exact:true}).click();
+  await page.mouse.click(720, 10);
+  assert.equal((await recordsWindow.boundingBox()).width, 1440, 'clicking the title bar keeps the window maximized');
+  await page.mouse.move(720, 10);
+  await page.mouse.down();
+  await page.mouse.move(740, 110, {steps:10});
+  const dragged = await recordsWindow.boundingBox();
+  assert.equal(dragged.width, resized.width);
+  assert.equal(dragged.height, resized.height);
+  assert.equal(dragged.y, 100);
+  assert.ok(Math.abs(dragged.x + dragged.width / 2 - 740) <= 1, 'the restored title bar stays under the pointer');
+  await page.mouse.up();
+  assert.deepEqual(await recordsWindow.boundingBox(), dragged);
+  await page.evaluate(() => {
+    hilfer.discover('OH-008');
+    const result = hilfer.reconcileClaim('CASE-001', 'OH-008', 'workEligibility');
+    if (!result.ok) throw new Error(result.message);
+  });
+  await page.waitForFunction(() => !document.querySelector('[data-open="footage"]').disabled);
+  await page.waitForFunction(() => hilfer.aiState.get() === 1);
+  await page.waitForFunction(() => !document.querySelector('#desktop').classList.contains('desktop-glitch-active'));
+  await openFromMenu(page, 'footage');
+  const video = page.locator('#footage-window video');
+  assert.ok(await video.isVisible());
+  assert.ok(await video.evaluate(el => el.paused));
+  await video.evaluate(async el => { el.muted = true; await el.play(); });
+  assert.ok(await video.evaluate(el => el.videoWidth > 0 && el.duration > 5));
+  await page.getByRole('button', {name:'Minimize Footage', exact:true}).click();
+  assert.ok(await video.evaluate(el => el.paused));
   for (const asset of ['logo', 'wallpaper', 'records', 'reconciliation', 'settings']) {
     assert.equal((await page.request.get(new URL('/assets/arwa/' + asset + '.webp', target).href)).status(), 200);
   }

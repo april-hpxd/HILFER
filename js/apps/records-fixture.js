@@ -16,8 +16,11 @@ export function renderRecord(record) {
   const claimControl = `<button type="button" class="claim-source" data-claim-record="${h(record.id)}" data-claim-field="workEligibility" aria-label="Compare ${h(displayValue(record.fields.workEligibility))} from ${h(record.id)} with the report"><strong>${h(displayValue(record.fields.workEligibility))}</strong><small>Compare status with report</small></button>`;
   let content;
   if (record.type === 'personnel_status') {
+    const portrait = record.employeeId === 'EMP-JESSICA'
+      ? '<img src="assets/arwa/portraits/jessica-record.webp" alt="Portrait of Jessica">'
+      : '<img src="assets/placeholders/personnel.svg" alt="Employee portrait placeholder"><figcaption>PHOTO / PENDING</figcaption>';
     content = `<header class="document-heading"><b>HILFER / HUMAN RESOURCES</b><span>Personnel File</span></header>
-      <div class="personnel-identity"><figure class="portrait-placeholder"><img src="assets/placeholders/personnel.svg" alt="Employee portrait placeholder"><figcaption>PHOTO / PENDING</figcaption></figure><div>${identity}</div></div>
+      <div class="personnel-identity"><figure class="portrait-placeholder">${portrait}</figure><div>${identity}</div></div>
       <p class="document-date">Recorded ${h(displayDate(record.date))}</p><section class="document-determination"><h3>Work status</h3>${claimControl}</section>
       <p class="document-note">${h(record.note)}</p>${auditDetails}<footer class="document-authorization"><b>AUTHORIZED HR EXTRACT</b><span>${h(record.department)}</span></footer>`;
   } else if (record.type === 'occupational_health_record') {
@@ -44,7 +47,7 @@ export function mountRecords(root, store, { onClaim = () => {} } = {}) {
       <section class="files-pane" aria-label="Record list"><div class="pane-label">Documents</div><div id="record-files"></div></section>
       <section class="preview-pane" aria-label="Document preview"><div class="preview-reference" id="preview-reference">Document preview</div><div class="preview-scroll" id="record-preview"></div></section></div>
     <div class="preview-drag-bar" id="preview-drag-bar" hidden></div>
-    <div class="records-status"><span id="record-count"></span><span id="record-drag-hint">Read-only</span></div>`;
+    <div class="records-status status-bar"><span class="status-bar-field" id="record-count"></span><span class="status-bar-field" id="record-drag-hint">Read-only</span></div>`;
 
   function renderFiles() {
     const records = store.getRecords().filter(record => (!department || record.department === department) &&

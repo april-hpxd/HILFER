@@ -66,3 +66,11 @@ The user authorized the exact five-thread/twelve-message corpus and its implemen
 ## 2026-11-04 — Classic Mail UI (user-approved second iteration)
 
 The user supplied a 1990s mail-client screenshot as the structural reference and a HILFER mockup as a palette/layout interpretation only. Mail changes from an integrated conversation preview to a folder tree/message table plus non-modal OS message windows. Single-click selects; double-click/Enter opens and marks only that message read. Several actual messages can be compared independently; outgoing actions remain disabled. Corpus, chronology, authorization, game state, Assistant and Jessica are unchanged. Mail v1's pending PR is not merged; this iteration branches from that implementation and is proposed to main as a new PR containing both.
+
+## 2026-11-20 — Post-footage reaction prototype (user-requested; team approval pending)
+
+The user requested a scripted reaction after a footage clip ends: a simulated in-game cursor closes Footage, opens Mail, and types `YOU WERE NOT SUPPOSED TO SEE THAT`. By explicit follow-up, implement this only as a temporary unsent draft—no real OS pointer movement, Send control, mailbox entry, or persistence. It is an **unapproved narrative experiment**, not canon or part of the first-case evidence flow. Its intended purpose is to make the workstation appear to suppress a discovery after viewing; whether it belongs in the final pacing/endgame remains for team discussion. Dead pixels likewise remain an unapproved visual-only experiment.
+
+## 2026-11-20 — Progressive AI portrait and RGB pixel treatment (user-requested; approval pending)
+
+The user requested the supplied AI portrait stages to change more consistently with the investigation, with distortion cues, and asked for black and RGB-colored dead pixels. Implement these as cumulative visual-only stages at meaningful milestones (first-case glitch, Mail echo, MAIL-010 error, and completed Footage), with a brief portrait transition and glitch sound when no other cue is already playing. The nine-per-stage black/RGB pixel field is an **unapproved visual experiment**, not radiation, a confirmed story mechanic, or narrative canon. Its purpose is to make progression perceptible; remove or revise it if the team does not approve the treatment.

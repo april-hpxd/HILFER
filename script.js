@@ -10,82 +10,21 @@ let zIndexCounter = 1000;
 let draggedElement = null;
 let offset = { x: 0, y: 0 };
 let selectedIcon = null;
-let draggedDesktopIcon = null;
-let suppressIconOpen = false;
 
-const applicationTitles = {
-    reconciliation: 'Reconciliation',
-    records: 'Records',
-    themes: 'Display Properties',
-    ai: 'HILFER Assistant',
-    'my-computer': 'My Computer',
-    emails: 'HILFER Mail',
-    research: 'Research',
-    'data-analytics': 'Data Analytics',
-    reports: 'Reports',
-    'med-info': 'Medical Information',
-    'facility-logs': 'Facility Logs',
-    footage: 'Security Footage',
-    notes: 'Notes',
-    maintenance: 'Maintenance',
-    'recycle-bin': 'Recycle Bin',
-    hr: 'Human Resources',
-    notices: 'Notices',
-    'safety-alerts': 'Safety Alerts',
-    downloads: 'Downloads'
-};
 
-function createPlaceholderWindow(windowId) {
-    const title = applicationTitles[windowId];
-    if (!title) return null;
-
-    const windowEl = document.createElement('section');
-    windowEl.className = 'window placeholder-window';
-    windowEl.id = windowId + '-window';
-    windowEl.setAttribute('aria-label', title);
-    const offset = (document.querySelectorAll('.window').length % 8) * 24;
-    Object.assign(windowEl.style, {
-        top: (70 + offset) + 'px',
-        left: (100 + offset) + 'px',
-        width: '420px',
-        height: '300px'
-    });
-
-    const header = document.createElement('div');
-    header.className = 'window-header';
-    const heading = document.createElement('span');
-    heading.className = 'window-title';
-    heading.textContent = title;
-    const controls = document.createElement('div');
-    controls.className = 'window-controls';
-    for (const [action, label, glyph] of [
-        ['minimize', 'Minimize', '_'],
-        ['maximize', 'Maximize', '□'],
-        ['close', 'Close', '×']
-    ]) {
-        const button = document.createElement('button');
-        button.className = 'window-button' + (action === 'close' ? ' close-btn' : '');
-        button.type = 'button';
-        button.dataset.control = action;
-        button.setAttribute('aria-label', `${label} ${title}`);
-        button.textContent = glyph;
-        controls.append(button);
-    }
-    header.append(heading, controls);
-
-    const content = document.createElement('div');
-    content.className = 'window-content placeholder-window-content';
-    const appName = document.createElement('span');
-    appName.textContent = title;
-    content.append(appName);
-    windowEl.append(header, content);
-    document.getElementById('desktop').append(windowEl);
-    fitWindowsToWorkspace();
-    return windowEl;
-}
 
 function openWindow(windowId) {
-    const windowEl = document.getElementById(windowId + '-window') || createPlaceholderWindow(windowId);
+    if (windowId === 'footage' && !isFootageUnlocked()) {
+        openWindow('access-restricted');
+        return;
+    }
+    if (windowId === 'ai') {
+        closeStartMenu();
+        clearIconSelection();
+        window.dispatchEvent(new Event('hilfer:assistant-open'));
+        return;
+    }
+    const windowEl = document.getElementById(windowId + '-window');
     if (!windowEl) return;
 
     windowEl.classList.add('visible');
@@ -146,7 +85,7 @@ function maximizeWindow(windowId) {
 
         windowEl.classList.add('maximized');
         windowEl.style.width = '100vw';
-        windowEl.style.height = 'calc(100dvh - 60px)';
+        windowEl.style.height = 'calc(100dvh - 32px)';
         windowEl.style.top = '0';
         windowEl.style.left = '0';
     }
@@ -199,6 +138,10 @@ function removeFromTaskbar(windowId) {
 }
 
 function toggleWindow(windowId) {
+    if (windowId === 'footage' && !isFootageUnlocked()) {
+        openWindow('footage');
+        return;
+    }
     const windowEl = document.getElementById(windowId + '-window');
     if (!windowEl) return;
 
@@ -210,10 +153,13 @@ function toggleWindow(windowId) {
     }
 }
 
+function isFootageUnlocked() {
+    return Boolean(window.hilfer?.getState?.().completedCaseIds?.includes('CASE-001'));
+}
+
 function getWindowTitle(windowId) {
-    return applicationTitles[windowId]
-        || document.getElementById(windowId + '-window')?.querySelector('.window-title')?.textContent
-        || windowId;
+    const titles = { reconciliation: 'Reconciliation', records: 'Records', reports: 'Reports', 'access-restricted': 'Access Restricted', themes: 'Display Properties', ai: 'HILFER Assistant', emails: 'HILFER Mail' };
+    return titles[windowId] || document.getElementById(windowId + '-window')?.querySelector('.window-title')?.textContent || windowId;
 }
 
 function clearIconSelection() {
@@ -244,10 +190,42 @@ function closeStartMenu() {
 }
 
 function initDragAndDrop() {
-    document.addEventListener('mousedown', function(e) {
+    const preview = document.createElement('div');
+    preview.className = 'window-snap-preview';
+    preview.hidden = true;
+    preview.setAttribute('aria-hidden', 'true');
+    document.body.append(preview);
+    const snapDistance = 12;
+    const atTopEdge = event => event.clientY - offset.y <= snapDistance;
+    let dragOrigin;
+    let snapArmed;
+    let pointerId = null;
+    let dragHandle;
+
+    function finishDrag() {
+        const releasedId = pointerId;
+        pointerId = null;
+        draggedElement = null;
+        preview.hidden = true;
+        if (releasedId !== null && dragHandle?.hasPointerCapture(releasedId)) {
+            dragHandle.releasePointerCapture(releasedId);
+        }
+        dragHandle = null;
+    }
+
+    document.addEventListener('pointerdown', function(e) {
         const header = e.target.closest('.window-header');
-        if (e.button === 0 && header && !header.parentElement.classList.contains('maximized') && !e.target.closest('.window-controls')) {
+        if (pointerId === null && e.pointerType === 'mouse' && e.button === 0 && header && !e.target.closest('.window-controls')) {
+            header.setPointerCapture(e.pointerId);
+            pointerId = e.pointerId;
+            dragHandle = header;
             draggedElement = header.parentElement;
+            const maximized = draggedElement.classList.contains('maximized');
+            dragOrigin = {
+                left: draggedElement.style.left, top: draggedElement.style.top,
+                x: e.clientX, y: e.clientY, maximized
+            };
+            snapArmed = !maximized;
             const rect = draggedElement.getBoundingClientRect();
             offset.x = e.clientX - rect.left;
             offset.y = e.clientY - rect.top;
@@ -259,22 +237,64 @@ function initDragAndDrop() {
         }
     });
 
-    document.addEventListener('mousemove', function(e) {
-        if (draggedElement) {
+    document.addEventListener('pointermove', function(e) {
+        if (draggedElement && e.pointerId === pointerId) {
             // Mouse release outside the browser must not leave a window stuck to the cursor.
-            if (!(e.buttons & 1)) { draggedElement = null; return; }
+            if (!(e.buttons & 1)) { finishDrag(); return; }
+            if (draggedElement.classList.contains('maximized')) {
+                if (Math.hypot(e.clientX - dragOrigin.x, e.clientY - dragOrigin.y) < 5) return;
+                const horizontalAnchor = offset.x / draggedElement.getBoundingClientRect().width;
+                maximizeWindow(draggedElement.id.slice(0, -'-window'.length));
+                dragOrigin.left = draggedElement.style.left;
+                dragOrigin.top = draggedElement.style.top;
+                offset.x = horizontalAnchor * draggedElement.getBoundingClientRect().width;
+            }
             const x = e.clientX - offset.x;
             const y = e.clientY - offset.y;
             // Like desktop windows, edges may extend beyond the visible workspace.
             draggedElement.style.left = x + 'px';
-            draggedElement.style.top = y + 'px';
+            draggedElement.style.top = Math.max(0, y) + 'px';
+            if (!atTopEdge(e)) {
+                snapArmed = true;
+                preview.hidden = true;
+            } else if (snapArmed && preview.hidden) {
+                const rect = draggedElement.getBoundingClientRect();
+                preview.style.setProperty('--snap-x', rect.left - 2 + 'px');
+                preview.style.setProperty('--snap-y', rect.top - 2 + 'px');
+                preview.style.setProperty('--snap-scale-x', rect.width / (window.innerWidth - 4));
+                preview.style.setProperty('--snap-scale-y', rect.height / (window.innerHeight - 36));
+                preview.hidden = false;
+            }
         }
     });
 
-    document.addEventListener('mouseup', function() {
-        draggedElement = null;
+    document.addEventListener('pointerup', function(e) {
+        if (e.button !== 0 || e.pointerId !== pointerId) return;
+        if (draggedElement && !preview.hidden && atTopEdge(e)) {
+            draggedElement.style.left = dragOrigin.left;
+            draggedElement.style.top = dragOrigin.top;
+            maximizeWindow(draggedElement.id.slice(0, -'-window'.length));
+        }
+        finishDrag();
     });
-    window.addEventListener('blur', () => { draggedElement = null; });
+    for (const event of ['pointercancel', 'lostpointercapture']) {
+        document.addEventListener(event, e => {
+            if (e.pointerId === pointerId) finishDrag();
+        });
+    }
+    document.addEventListener('keydown', e => {
+        if (e.key !== 'Escape' || !draggedElement) return;
+        e.preventDefault();
+        e.stopPropagation();
+        draggedElement.style.left = dragOrigin.left;
+        draggedElement.style.top = dragOrigin.top;
+        if (dragOrigin.maximized && !draggedElement.classList.contains('maximized')) {
+            maximizeWindow(draggedElement.id.slice(0, -'-window'.length));
+        }
+        finishDrag();
+    }, true);
+    window.addEventListener('blur', finishDrag);
+    window.addEventListener('resize', finishDrag);
 }
 
 // Refit on display-size changes only; never clamp a user's ongoing window movement.
@@ -283,75 +303,12 @@ function fitWindowsToWorkspace() {
     for (const el of document.querySelectorAll('.window:not(.maximized)')) {
         const style = getComputedStyle(el);
         const width = Math.min(parseFloat(style.width), window.innerWidth - 12);
-        const height = Math.min(parseFloat(style.height), window.innerHeight - 68);
+        const height = Math.min(parseFloat(style.height), window.innerHeight - 42);
         el.style.left = (window.innerWidth <= 700 ? 6 : Math.max(6, Math.min(parseFloat(el.style.left) || 0, window.innerWidth - width - 12))) + 'px';
-        el.style.top = (window.innerWidth <= 700 ? 10 : Math.max(6, Math.min(parseFloat(el.style.top) || 0, window.innerHeight - height - 68))) + 'px';
+        el.style.top = (window.innerWidth <= 700 ? 10 : Math.max(6, Math.min(parseFloat(el.style.top) || 0, window.innerHeight - height - 42))) + 'px';
     }
 }
 
-function setDesktopIconPosition(icon, left, top) {
-    const desktop = document.getElementById('desktop');
-    const maxLeft = Math.max(0, desktop.clientWidth - icon.offsetWidth - 8);
-    const maxTop = Math.max(0, desktop.clientHeight - icon.offsetHeight - 68);
-    const x = Math.max(0, Math.min(left, maxLeft));
-    const y = Math.max(0, Math.min(top, maxTop));
-    icon.style.left = (x / desktop.clientWidth * 100) + '%';
-    icon.style.top = (y / desktop.clientHeight * 100) + '%';
-}
-
-function fitDesktopIconsToWorkspace() {
-    const desktop = document.getElementById('desktop');
-    const bounds = desktop.getBoundingClientRect();
-    for (const icon of desktop.querySelectorAll('.desktop-icons .icon')) {
-        if (icon.dataset.userPositioned !== 'true') continue;
-        const iconBounds = icon.getBoundingClientRect();
-        setDesktopIconPosition(icon, iconBounds.left - bounds.left, iconBounds.top - bounds.top);
-    }
-}
-
-function initDesktopIconDrag() {
-    document.addEventListener('pointerdown', e => {
-        const icon = e.target.closest('.desktop-icons .icon');
-        if (!icon || e.button !== 0) return;
-        const desktop = document.getElementById('desktop');
-        const bounds = desktop.getBoundingClientRect();
-        const iconBounds = icon.getBoundingClientRect();
-        draggedDesktopIcon = {
-            icon,
-            pointerId: e.pointerId,
-            startX: e.clientX,
-            startY: e.clientY,
-            left: iconBounds.left - bounds.left,
-            top: iconBounds.top - bounds.top,
-            moved: false
-        };
-    });
-
-    document.addEventListener('pointermove', e => {
-        if (!draggedDesktopIcon || draggedDesktopIcon.pointerId !== e.pointerId) return;
-        const dx = e.clientX - draggedDesktopIcon.startX;
-        const dy = e.clientY - draggedDesktopIcon.startY;
-        if (!draggedDesktopIcon.moved && Math.hypot(dx, dy) < 5) return;
-        draggedDesktopIcon.moved = true;
-        draggedDesktopIcon.icon.dataset.userPositioned = 'true';
-        setDesktopIconPosition(draggedDesktopIcon.icon, draggedDesktopIcon.left + dx, draggedDesktopIcon.top + dy);
-        e.preventDefault();
-    });
-
-    document.addEventListener('pointerup', e => {
-        if (!draggedDesktopIcon || draggedDesktopIcon.pointerId !== e.pointerId) return;
-        suppressIconOpen = draggedDesktopIcon.moved;
-        draggedDesktopIcon = null;
-    });
-    document.addEventListener('pointercancel', () => {
-        draggedDesktopIcon = null;
-        suppressIconOpen = false;
-    });
-    window.addEventListener('blur', () => {
-        draggedDesktopIcon = null;
-        suppressIconOpen = false;
-    });
-}
 function updateClock() {
     const clockEl = document.getElementById('clock');
     const now = new Date();
@@ -366,12 +323,6 @@ function updateClock() {
 
 // HILFER: only title bars move windows; native record drag events remain untouched.
 document.addEventListener('click', e => {
-    if (suppressIconOpen && e.target.closest('.desktop-icons .icon')) {
-        e.preventDefault();
-        suppressIconOpen = false;
-        return;
-    }
-    suppressIconOpen = false;
     const app = e.target.closest('[data-open]');
     if (app) { openWindow(app.dataset.open); return; }
     const control = e.target.closest('[data-control]');
@@ -389,33 +340,24 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeStartMe
 // Presentation-only demo switch. An explicit choice survives theme changes in this session.
 function updateDesktopLogoControl() {
     const root = document.documentElement;
-    const pixelated = (root.dataset.logoStyle || 'pixel') === 'pixel';
+    const pixelated = (root.dataset.logoStyle || (root.dataset.theme === 'archive' ? 'pixel' : 'smooth')) === 'pixel';
     document.querySelector('#desktop-logo-status').textContent = pixelated ? 'Logo: pixelated' : 'Logo: original';
     document.querySelector('#toggle-desktop-logo').textContent = pixelated ? 'Use original logo' : 'Use pixelated logo';
 }
 document.querySelector('#toggle-desktop-logo').addEventListener('click', () => {
     const root = document.documentElement;
-    const current = root.dataset.logoStyle || 'pixel';
+    const current = root.dataset.logoStyle || (root.dataset.theme === 'archive' ? 'pixel' : 'smooth');
     root.dataset.logoStyle = current === 'pixel' ? 'smooth' : 'pixel';
     updateDesktopLogoControl();
 });
 updateDesktopLogoControl();
-document.querySelector('#reset-progress').addEventListener('click', () => {
-    delete document.documentElement.dataset.logoStyle;
-    updateDesktopLogoControl();
-});
 document.querySelector('#display-theme').addEventListener('change', e => {
     document.documentElement.dataset.theme = e.target.value;
     updateDesktopLogoControl();
 });
 initDragAndDrop();
-initDesktopIconDrag();
 fitWindowsToWorkspace();
-fitDesktopIconsToWorkspace();
-window.addEventListener('resize', () => {
-    fitWindowsToWorkspace();
-    fitDesktopIconsToWorkspace();
-});
+window.addEventListener('resize', fitWindowsToWorkspace);
 updateClock();
 setInterval(updateClock, 1000);
 
@@ -429,7 +371,7 @@ function arrangeWorkspace() {
     }
     const available = window.innerWidth - 136;
     const registerWidth = Math.round(available * 0.43);
-    const height = Math.min(620, window.innerHeight - 104);
+    const height = Math.min(620, window.innerHeight - 82);
     for (const [id, left, width] of [
         ['reconciliation', 112, registerWidth],
         ['records', 124 + registerWidth, available - registerWidth]

@@ -1,0 +1,13 @@
+# HILFER Mail conversation view
+
+Keep the HILFER desktop and its independent windows. The Mail table lists one row per conversation, with deduplicated sender names, message count, subject, a one-line preview of the latest message, and its date. Label Reconciliation Desk as “me” when it is a sender. Sort by newest applicable message. Use the existing envelope state and emphasize a row when any message in the thread is unread.
+
+Double-click or Enter opens the conversation in a normal OS window titled with the thread subject. Reopening the same thread focuses its existing window. Other threads can stay open beside it. Show messages oldest first with thin separators, a sender avatar or initials, sender name and date. Each message has a keyboard-operable header. A collapsed message shows a one-line body preview. The last message starts expanded; entry from search or Sent may expand the relevant message instead. Expanded messages expose the envelope details, full authored body and existing Records links. Preserve independent scrolling and the shell's window controls.
+
+Opening a conversation marks **all messages in that thread read**, including collapsed ones. Selecting a table row or expanding and collapsing messages does not change receipts. Mark Unread applies to the whole thread. Keep persisted read IDs and existing reset behavior, using the model's existing thread-level operations.
+
+Inbox and Corporate Archive retain their authored membership. Sent derives membership from messages actually sent by the Reconciliation Desk address, so an authorized conversation may appear in both Inbox and Sent. Sent rows show “To:” recipients and the preview and date of the most recent outgoing message. Opening one shows the conversation with that outgoing message expanded. The supplied corpus has no outgoing messages from this account, so Sent remains empty in the demo. Test this behavior with a synthetic fixture only.
+
+Search returns one row per authorized matching thread. Keep the latest-message preview for the row and open at the newest matching message. Apply authorization before constructing rows, previews, counts and the reader. If a grant is revoked, close any affected window. Use the existing HILFER graphics by default. Consider external Windows 98 artwork only after verifying permission to redistribute it.
+
+Verify row grouping and order, collapse/expand, keyboard opening, focusing and closing separate thread windows, whole-thread read/unread across reload and reset, Inbox/Sent overlap in a fixture, restricted access, search, and HR-014 navigation. Check narrow and desktop layouts and run the existing logic and browser regression suites.

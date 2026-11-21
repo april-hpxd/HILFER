@@ -22,8 +22,14 @@ async function checkArtwork(page, graphite, logo = 'theme') {
     const icon = page.locator('.desktop-icons [data-open="' + app + '"] .icon-image');
     assert.ok((await icon.evaluate(el => getComputedStyle(el).backgroundImage)).includes(suffix));
     assert.equal(await icon.evaluate(el => getComputedStyle(el).imageRendering), 'pixelated');
-    assert.equal(await icon.evaluate(el => getComputedStyle(el).mixBlendMode), graphite ? 'multiply' : 'normal');
-    for (const selector of ['#' + app + '-window .window-title','.taskbar-item[data-window="' + app + '"]','.start-menu-item[data-open="' + app + '"]']) {
+    const selectors = ['.start-menu-item[data-open="' + app + '"]'];
+    if (app === 'ai') {
+      assert.ok(await page.locator('#assistant-portrait').isVisible());
+      assert.equal(await page.locator('.taskbar-item[data-window="ai"]').count(), 0);
+    } else {
+      selectors.push('#' + app + '-window .window-title', '.taskbar-item[data-window="' + app + '"]');
+    }
+    for (const selector of selectors) {
       assert.ok((await page.locator(selector).evaluate(el => getComputedStyle(el,'::before').backgroundImage)).includes(suffix), selector);
     }
   }
@@ -32,7 +38,7 @@ async function checkArtwork(page, graphite, logo = 'theme') {
     assert.ok((await icon.evaluate(el => getComputedStyle(el).backgroundImage)).includes(department + (graphite ? '-graphite.webp' : '-pixel.webp')));
   }
   assert.ok((await page.locator('.file-symbol').first().evaluate(el => getComputedStyle(el).backgroundImage)).includes('file-' + (graphite ? 'graphite' : 'pixel') + '.webp'));
-  const expectedLogo = logo === 'smooth' ? '/logo.webp' : logo === 'pixel' ? (graphite ? 'logo-graphite.webp' : 'logo-pixel.webp') : graphite ? 'logo-graphite.webp' : 'logo-pixel.webp';
+  const expectedLogo = logo === 'smooth' ? '/logo.webp' : logo === 'pixel' ? (graphite ? 'logo-graphite.webp' : 'logo-pixel.webp') : graphite ? 'logo-graphite.webp' : '/logo.webp';
   assert.ok((await page.locator('.desktop-logo').evaluate(el => getComputedStyle(el).backgroundImage)).includes(expectedLogo));
 }
 try {
@@ -40,14 +46,14 @@ try {
   await page.goto(target); await page.waitForFunction(() => window.hilfer);
   for (const app of Object.keys(apps)) await open(page, app);
   await checkArtwork(page, false);
-  assert.ok((await page.locator('.desktop-logo').evaluate(el => getComputedStyle(el).backgroundImage)).includes('logo-pixel.webp'));
+  assert.ok((await page.locator('.desktop-logo').evaluate(el => getComputedStyle(el).backgroundImage)).includes('/logo.webp'));
   assert.ok((await page.locator('html').evaluate(el => getComputedStyle(el).cursor)).includes('cursor-small.png'));
   assert.ok((await page.locator('.start-button').evaluate(el => getComputedStyle(el).cursor)).includes('cursor_finger-small.png'));
   assert.ok((await page.locator('#desktop').evaluate(el => getComputedStyle(el).backgroundImage)).includes('/wallpapers/1.png'));
   await open(page, 'themes'); await page.locator('#toggle-desktop-logo').click();
-  assert.ok((await page.locator('.desktop-logo').evaluate(el => getComputedStyle(el).backgroundImage)).includes('/logo.webp'));
+  assert.ok((await page.locator('.desktop-logo').evaluate(el => getComputedStyle(el).backgroundImage)).includes('logo-pixel.webp'));
   await page.locator('.start-button').click(); await page.locator('#reset-progress').click();
-  assert.equal(await page.locator('html').getAttribute('data-logo-style'), null);
+  assert.equal(await page.locator('html').getAttribute('data-logo-style'), 'pixel');
   assert.equal(await page.locator('#desktop-logo-status').innerText(), 'Logo: pixelated');
   assert.ok((await page.locator('.desktop-logo').evaluate(el => getComputedStyle(el).backgroundImage)).includes('logo-pixel.webp'));
   const initial = await page.evaluate(() => hilfer.getState());
