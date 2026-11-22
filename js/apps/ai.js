@@ -11,6 +11,11 @@ export function deriveAssistant(state, records, content) {
   const entry = content.dialogue.find(message => message.on === signal);
   const welcome = content.dialogue.find(message => message.on === 'assignment.available');
   return { phase, signal, messages: [...new Set([welcome, entry])].filter(Boolean),
+    unlockedSignals: [
+      'assignment.available',
+      ...(investigating || filed ? ['case.review-started'] : []),
+      ...(filed ? ['case.report-filed'] : [])
+    ],
     voice: entry?.voice ?? null,
     notificationId: filed ? content.caseId + ':reconciled' : null };
 }
@@ -59,20 +64,31 @@ export function mountAI(root, store, content, { storage, aiState } = {}) {
   try {
     const saved = JSON.parse(storage?.getItem(deliveryKey) ?? 'null');
     if (saved?.caseId === content.caseId && Array.isArray(saved.signals)) {
-      for (const signal of saved.signals) if (content.dialogue.some(entry => entry.on === signal)) delivered.add(signal);
+      const { unlockedSignals } = deriveAssistant(store.getState(), store.getRecords(), content);
+      for (const entry of content.dialogue) {
+        if (saved.signals.includes(entry.on) && unlockedSignals.includes(entry.on)) delivered.add(entry.on);
+      }
     }
   } catch { /* Delivery still deduplicates in this session. */ }
   const history = new Set();
-  let voiceCue = null;
+  const pendingVoice = new Set();
   let needsGesture = false;
   function speakPending() {
+    const [voiceCue] = pendingVoice;
     if (!voiceCue || document.hidden) return;
     if (navigator.userActivation?.hasBeenActive === false) { needsGesture = true; return; }
     voice.play(voiceCue, {
-      onEnded: speakPending,
+      onEnded() {
+        pendingVoice.delete(voiceCue);
+        speakPending();
+      },
       onError(error) {
         needsGesture = error?.name === 'NotAllowedError';
-        if (!needsGesture) announcement.textContent = 'Voice unavailable.';
+        if (!needsGesture) {
+          pendingVoice.delete(voiceCue);
+          announcement.textContent = 'Voice unavailable.';
+          speakPending();
+        }
       }
     });
   }
@@ -109,7 +125,6 @@ export function mountAI(root, store, content, { storage, aiState } = {}) {
       storage?.setItem(deliveryKey, JSON.stringify({caseId:content.caseId, signals:[...delivered]}));
     } catch { /* Delivery still deduplicates in this session. */ }
     history.add(entry);
-    voiceCue = entry.voice ?? null;
     renderHistory();
     setOpen(true, false);
     speakPending();
@@ -126,10 +141,14 @@ export function mountAI(root, store, content, { storage, aiState } = {}) {
     }
     if (model.phase !== previousPhase && (model.phase !== 'welcome' || !previousPhase)) {
       if (!previousPhase) {
-        for (const signal of delivered) history.add(content.dialogue.find(message => message.on === signal));
+        for (const signal of delivered) {
+          const entry = content.dialogue.find(message => message.on === signal);
+          history.add(entry);
+          if (entry.voice && !voice.isComplete(entry.voice.id)) pendingVoice.add(entry.voice);
+        }
       }
       for (const message of model.messages) history.add(message);
-      voiceCue = model.voice;
+      if (model.voice && !voice.isComplete(model.voice.id)) pendingVoice.add(model.voice);
       previousPhase = model.phase;
       renderHistory();
       deliver(model.signal);
@@ -166,7 +185,10 @@ export function mountAI(root, store, content, { storage, aiState } = {}) {
     if (event.target.closest('[data-open]')) setOpen(false);
   });
   window.addEventListener('hilfer:assistant-open', () => setOpen(true));
-  window.addEventListener('hilfer:assistant-dialogue', ({detail}) => deliver(detail?.signal));
+  window.addEventListener('hilfer:assistant-dialogue', ({detail}) => {
+    const { signal } = deriveAssistant(store.getState(), store.getRecords(), content);
+    if (detail?.signal === signal) deliver(signal);
+  });
   function retryVoice(event) {
     if (!event.isTrusted || !needsGesture) return;
     needsGesture = false;
@@ -184,6 +206,7 @@ export function mountAI(root, store, content, { storage, aiState } = {}) {
     if (type === 'hilfer:progress-reset') {
       receipt.reset();
       voice.reset();
+      pendingVoice.clear();
       delivered.clear();
       history.clear();
       previousPhase = undefined;

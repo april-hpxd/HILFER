@@ -114,6 +114,8 @@ The original store still validates ID-based attachment and explicit submission; 
 
 The Assistant is docked above the taskbar. An unseen dialogue signal opens its balloon without taking focus. The portrait, report notification and shell shortcut also open it manually. The shell dispatches `hilfer:assistant-open` for those shortcuts. Opening the correspondence manually acknowledges the report update in `hilfer:assistant:v1`. Demo reset clears the receipts and delivers the welcome again. Unavailable storage retains session behavior.
 
+The `hilfer:assistant-dialogue` event accepts a `detail.signal` matching the current case milestone. Newly unlocked narration plays in milestone order at +2 semitones (about 12% faster). Playback completion is saved per cue in `hilfer:assistant-dialogue:v1`. Demo reset clears the voice checkpoints.
+
 The existing `hilfer:case-reconciled` event plays the imported glitch cue at 20% volume for at most 1.5 seconds. The visual microglitch remains 650 ms. Reload/duplicate submissions do not emit another cue; reset/page exit stops playback. Rejected audio playback never interrupts filing or assistant notification.
 
 Checks: `node --test`, existing `node tests/browser.check.js`, and `node tests/assistant.browser.check.js` (same Playwright/Edge environment variables). The assistant check covers fresh play, contextual messages, actual audio start/stop, unread/read reloads, reset/replay, rejected audio, portrait variance, balloon dismissal and focus, and mobile notification access.

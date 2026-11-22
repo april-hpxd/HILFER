@@ -1,3 +1,5 @@
+const NARRATION_RATE = 2 ** (2 / 12);
+
 // Dialogue checkpoint adapted from Lyden King's Assistant integration.
 export function createAssistantVoice(storage, caseId, {
   audio = typeof Audio === 'function' ? new Audio() : null
@@ -11,7 +13,11 @@ export function createAssistantVoice(storage, caseId, {
     }
   } catch { /* Unavailable storage still permits narration. */ }
 
-  if (audio) audio.preload = 'none';
+  if (audio) {
+    audio.preload = 'none';
+    audio.preservesPitch = false;
+    audio.defaultPlaybackRate = NARRATION_RATE;
+  }
   let run = 0;
   let activeId = null;
   function stop() {
@@ -25,6 +31,7 @@ export function createAssistantVoice(storage, caseId, {
 
   return {
     stop,
+    isComplete: id => completed.has(id),
     reset() {
       stop();
       completed.clear();
@@ -51,6 +58,7 @@ export function createAssistantVoice(storage, caseId, {
       };
       audio.onerror = fail;
       audio.src = cue.src;
+      audio.playbackRate = NARRATION_RATE;
       // Start within the gesture that opened the balloon.
       try { audio.play()?.catch(fail); } catch (error) { fail(error); }
     }

@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { deriveAssistant, createAssistantReceipt, ASSISTANT_RECEIPT_KEY } from '../js/apps/ai.js';
+import { deriveAssistant, createAssistantReceipt, mountAI, ASSISTANT_RECEIPT_KEY } from '../js/apps/ai.js';
 import { createStore } from '../js/core/store.js';
 import { createAssistantVoice } from '../js/apps/assistant-voice.js';
 
@@ -65,6 +65,74 @@ test('assistant derives assignment, investigation and filed correspondence witho
 test('unrelated discovery never advances assistant correspondence', () => {
   const state = {completedCaseIds:[], resolutions:{}, discoveredEvidenceIds:['OTHER']};
   assert.equal(deriveAssistant(state, [...records, {id:'OTHER',caseIds:['OTHER-CASE']}], content).phase, 'welcome');
+});
+
+test('Assistant plays higher-pitched cues in progression order after rapid milestones', t => {
+  const storage = memory();
+  storage.setItem('hilfer:assistant-delivery:v1', JSON.stringify({
+    caseId: 'CASE-001', signals: ['case.report-filed']
+  }));
+  const store = createStore({records, cases, storage});
+  const nodes = new Map();
+  const root = new EventTarget();
+  root.querySelector = selector => {
+    if (!nodes.has(selector)) nodes.set(selector, Object.assign(new EventTarget(), {
+      hidden: true, setAttribute() {}, getAttribute() {}, toggleAttribute() {}, focus() {}
+    }));
+    return nodes.get(selector);
+  };
+  const played = [];
+  const audio = {
+    play() {
+      played.push(this.src);
+      assert.equal(this.playbackRate, 2 ** (2 / 12));
+      assert.equal(this.defaultPlaybackRate, this.playbackRate);
+      assert.equal(this.preservesPitch, false);
+    },
+    pause() {}
+  };
+  for (const [key, value] of Object.entries({
+    window: new EventTarget(),
+    document: new EventTarget(),
+    navigator: {userActivation:{hasBeenActive:true}},
+    Audio: function () { return audio; }
+  })) {
+    const original = Object.getOwnPropertyDescriptor(globalThis, key);
+    Object.defineProperty(globalThis, key, { configurable: true, value });
+    t.after(() => {
+      if (original) Object.defineProperty(globalThis, key, original);
+      else delete globalThis[key];
+    });
+  }
+
+  mountAI(root, store, content, {storage});
+  for (const signal of ['case.review-started', 'case.report-filed']) {
+    window.dispatchEvent(Object.assign(new Event('hilfer:assistant-dialogue'), {detail:{signal}}));
+  }
+  const transcript = () => root.querySelector('.ai-transcript').innerHTML;
+  assert.doesNotMatch(transcript(), /Review pending|Report updated/);
+  const [welcome, review, filed] = content.dialogue.map(entry => entry.voice.src);
+  assert.deepEqual(played, [welcome]);
+
+  store.discover('OH-008');
+  assert.match(transcript(), /Review pending/);
+  assert.doesNotMatch(transcript(), /Report updated/);
+  assert.equal(store.reconcileClaim('CASE-001', 'OH-008', 'workEligibility').ok, true);
+  assert.match(transcript(), /Report updated/);
+  assert.deepEqual(played, [welcome]);
+  audio.onended();
+  assert.deepEqual(played, [welcome, review]);
+  audio.onended();
+  assert.deepEqual(played, [welcome, review, filed]);
+  audio.onended();
+  assert.deepEqual(JSON.parse(storage.getItem('hilfer:assistant-dialogue:v1')).completedIds,
+    content.dialogue.map(entry => entry.voice.id));
+
+  const notification = root.querySelector('#assistant-notification');
+  assert.equal(notification.hidden, false);
+  notification.dispatchEvent(new Event('click'));
+  assert.equal(notification.hidden, true);
+  assert.equal(JSON.parse(storage.getItem(ASSISTANT_RECEIPT_KEY)).readId, 'CASE-001:reconciled');
 });
 
 test('UI receipt survives reload, is idempotent, resets independently and rejects incompatible saves', () => {
